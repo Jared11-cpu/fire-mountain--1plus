@@ -13,6 +13,8 @@ import {
   Users,
 } from 'lucide-react';
 
+const sceneryBase = `${import.meta.env.BASE_URL}scenery/`;
+
 export type CityName = '宜昌' | '武汉' | '恩施' | '荆州' | '襄阳' | '黄石';
 
 export type City = {
@@ -56,7 +58,7 @@ export const cities: City[] = [
     title: '三峡山水与长江夜游',
     tags: ['三峡大坝', '清江画廊', '江景美食'],
     image: '三峡水脉',
-    imageUrl: '/scenery/yichang.svg',
+    imageUrl: `${sceneryBase}yichang.svg`,
     gradient: 'from-river via-jade to-[#85C77A]',
   },
   {
@@ -64,7 +66,7 @@ export const cities: City[] = [
     title: '黄鹤楼、东湖与城市咖啡',
     tags: ['Citywalk', '历史文化', '江汉路'],
     image: '江城夜色',
-    imageUrl: '/scenery/wuhan.svg',
+    imageUrl: `${sceneryBase}wuhan.svg`,
     gradient: 'from-[#243B53] via-river to-tower',
   },
   {
@@ -72,7 +74,7 @@ export const cities: City[] = [
     title: '峡谷、溶洞与短视频大片',
     tags: ['自然风光', '土家文化', '云海'],
     image: '峡谷云阶',
-    imageUrl: '/scenery/enshi.svg',
+    imageUrl: `${sceneryBase}enshi.svg`,
     gradient: 'from-[#1F513F] via-jade to-[#8DBB66]',
   },
   {
@@ -80,7 +82,7 @@ export const cities: City[] = [
     title: '古城墙与楚文化沉浸',
     tags: ['古城', '博物馆', '历史旅拍'],
     image: '楚风古城',
-    imageUrl: '/scenery/jingzhou.svg',
+    imageUrl: `${sceneryBase}jingzhou.svg`,
     gradient: 'from-[#693E2E] via-tower to-[#D8A64D]',
   },
   {
@@ -88,7 +90,7 @@ export const cities: City[] = [
     title: '古城江湖与唐城夜游',
     tags: ['古风', '影视城', '汉江'],
     image: '汉江城廓',
-    imageUrl: '/scenery/xiangyang.svg',
+    imageUrl: `${sceneryBase}xiangyang.svg`,
     gradient: 'from-[#31425B] via-[#6F7757] to-[#D6AF62]',
   },
   {
@@ -96,7 +98,7 @@ export const cities: City[] = [
     title: '矿冶工业遗产与湖山周末',
     tags: ['矿山公园', '仙岛湖', '工业风'],
     image: '矿冶湖光',
-    imageUrl: '/scenery/huangshi.svg',
+    imageUrl: `${sceneryBase}huangshi.svg`,
     gradient: 'from-[#293241] via-[#587D71] to-[#D8A64D]',
   },
 ];
@@ -164,7 +166,7 @@ export const attractions: Attraction[] = [
     name: '三峡大坝',
     city: '宜昌',
     image: '长江中轴',
-    imageUrl: '/scenery/yichang.svg',
+    imageUrl: `${sceneryBase}yichang.svg`,
     tags: ['大国工程', '江景', '研学'],
     intro: '长江三峡核心地标，适合工程研学、亲子科普和江景打卡。',
     voices: {
@@ -180,7 +182,7 @@ export const attractions: Attraction[] = [
     name: '黄鹤楼',
     city: '武汉',
     image: '江城楼影',
-    imageUrl: '/scenery/wuhan.svg',
+    imageUrl: `${sceneryBase}wuhan.svg`,
     tags: ['诗词', '武汉地标', '夜景'],
     intro: '武汉城市名片，串联诗词、长江大桥和城市天际线。',
     voices: {
@@ -196,7 +198,7 @@ export const attractions: Attraction[] = [
     name: '恩施大峡谷',
     city: '恩施',
     image: '峡谷云海',
-    imageUrl: '/scenery/enshi.svg',
+    imageUrl: `${sceneryBase}enshi.svg`,
     tags: ['喀斯特', '徒步', '短视频'],
     intro: '湖北自然景观王牌，云海、绝壁、栈道和地质奇观密集。',
     voices: {
@@ -212,7 +214,7 @@ export const attractions: Attraction[] = [
     name: '荆州古城',
     city: '荆州',
     image: '古城墙影',
-    imageUrl: '/scenery/jingzhou.svg',
+    imageUrl: `${sceneryBase}jingzhou.svg`,
     tags: ['楚文化', '三国', '古城'],
     intro: '城墙、护城河与楚文化记忆叠加，适合历史文化游。',
     voices: {
@@ -228,7 +230,7 @@ export const attractions: Attraction[] = [
     name: '武当山',
     city: '十堰',
     image: '仙山金顶',
-    imageUrl: '/scenery/xiangyang.svg',
+    imageUrl: `${sceneryBase}xiangyang.svg`,
     tags: ['道教文化', '古建筑', '山岳'],
     intro: '世界文化遗产，以道教建筑群和山岳景观闻名。',
     voices: {
@@ -244,7 +246,7 @@ export const attractions: Attraction[] = [
     name: '东湖',
     city: '武汉',
     image: '湖岸绿道',
-    imageUrl: '/scenery/huangshi.svg',
+    imageUrl: `${sceneryBase}huangshi.svg`,
     tags: ['骑行', '咖啡', '自然城市'],
     intro: '城市湖泊与绿道系统结合，适合松弛感 Citywalk。',
     voices: {
