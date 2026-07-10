@@ -1,7 +1,12 @@
-import { useState } from 'react';
-import { Calculator, Camera, Check, Film, Loader2, MapPin, MessageSquareText, Route, Sparkles, Utensils } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Calculator, Camera, Check, Copy, Film, LocateFixed, Loader2, MapPin, MessageSquareText, Navigation, Route, Sparkles, Utensils } from 'lucide-react';
 import { budgetOptions, cities, dayOptions, examples, groupOptions, interestOptions, type CityName } from '../data/mockData';
 import { generateTravelPlan, type PlannerInput, type TravelPlan } from '../utils/aiGenerator';
+import { RouteMap } from './RouteMap';
+import { RouteInsightPanel } from './RouteInsightPanel';
+import { generateSmartRoute } from '../services/mapService';
+import { getBrowserLocation, makeMockLocation, mockLocationOptions } from '../services/locationService';
+import type { RoutePoint, SmartRoute, UserLocation } from '../types/route';
 
 type PlannerPageProps = {
   initialCity: CityName;
@@ -17,6 +22,8 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
     prompt: '我想去宜昌两天一夜，预算 600，喜欢拍照和美食。',
   });
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [location, setLocation] = useState<UserLocation>(() => makeMockLocation(initialCity));
   const [plan, setPlan] = useState<TravelPlan>(() => generateTravelPlan({
     city: initialCity,
     days: 2,
@@ -25,8 +32,30 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
     group: '朋友',
     prompt: '我想去宜昌两天一夜，预算 600，喜欢拍照和美食。',
   }));
+  const [smartRoute, setSmartRoute] = useState<SmartRoute>(() => generateSmartRoute({
+    city: initialCity,
+    days: 2,
+    budget: 600,
+    interests: ['拍照', '美食'],
+    group: '朋友',
+    prompt: '我想去宜昌两天一夜，预算 600，喜欢拍照和美食。',
+  }, makeMockLocation(initialCity)));
+  const [selectedPointId, setSelectedPointId] = useState<string>();
+  const [showInsights, setShowInsights] = useState(true);
+  const [navigating, setNavigating] = useState(false);
+  const [activePointIndex, setActivePointIndex] = useState(0);
   const [toast, setToast] = useState('已载入宜昌示例方案');
+  const resultRef = useRef<HTMLDivElement>(null);
+  const navigationTimerRef = useRef<number>();
   const selectedCity = cities.find((city) => city.name === form.city) ?? cities[0];
+
+  useEffect(() => {
+    return () => {
+      if (navigationTimerRef.current) {
+        window.clearInterval(navigationTimerRef.current);
+      }
+    };
+  }, []);
 
   const toggleInterest = (item: string) => {
     setForm((prev) => ({
@@ -37,32 +66,119 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
 
   const generate = () => {
     setLoading(true);
-    setToast('AI 正在理解需求、拆解路线和生成传播内容...');
+    setToast('AI 正在理解需求、拆解路线、生成地图和沿途观察...');
     window.setTimeout(() => {
-      setPlan(generateTravelPlan(form));
+      const nextPlan = generateTravelPlan(form);
+      const nextRoute = generateSmartRoute(form, location.city === form.city ? location : makeMockLocation(form.city));
+      setPlan(nextPlan);
+      setSmartRoute(nextRoute);
+      setSelectedPointId(nextRoute.points[0]?.id);
+      setActivePointIndex(0);
+      setNavigating(false);
+      setShowInsights(true);
       setLoading(false);
-      setToast(`已生成 ${form.city}${form.days}天旅行智能体方案`);
+      setToast(`已生成 ${form.city}${form.days}天路线地图与沿途观察`);
+      window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     }, 650);
   };
 
   const applyExample = (example: (typeof examples)[number]) => {
-    setForm({
+    const nextInput = {
       city: example.city,
       days: example.days,
       budget: example.budget,
       interests: example.interests,
       group: example.group,
       prompt: example.prompt,
-    });
-    setPlan(generateTravelPlan({
-      city: example.city,
-      days: example.days,
-      budget: example.budget,
-      interests: example.interests,
-      group: example.group,
-      prompt: example.prompt,
-    }));
+    };
+    const nextLocation = makeMockLocation(example.city);
+    const nextRoute = generateSmartRoute(nextInput, nextLocation);
+    setForm(nextInput);
+    setLocation(nextLocation);
+    setPlan(generateTravelPlan(nextInput));
+    setSmartRoute(nextRoute);
+    setSelectedPointId(nextRoute.points[0]?.id);
+    setActivePointIndex(0);
+    setNavigating(false);
     setToast(`已切换到示例：${example.label}`);
+  };
+
+  const updateCity = (city: CityName) => {
+    setForm((prev) => ({ ...prev, city }));
+    if (location.status !== 'success') {
+      setLocation(makeMockLocation(city));
+    }
+  };
+
+  const useCurrentLocation = async () => {
+    setLocating(true);
+    setLocation((prev) => ({ ...prev, status: 'locating', message: '正在请求浏览器定位授权...' }));
+    const nextLocation = await getBrowserLocation(form.city);
+    setLocation(nextLocation);
+    setLocating(false);
+    setToast(nextLocation.message);
+  };
+
+  const chooseMockLocation = (name: string) => {
+    const option = mockLocationOptions.find((item) => item.name === name);
+    if (!option) return;
+    const nextLocation: UserLocation = {
+      ...option,
+      status: 'mock',
+      message: '已切换为手动 Mock 出发地。',
+    };
+    setLocation(nextLocation);
+    setToast(`出发地已切换为 ${option.name}`);
+  };
+
+  const regenerateRoute = () => {
+    const nextRoute = generateSmartRoute(form, location.city === form.city ? location : makeMockLocation(form.city));
+    setSmartRoute(nextRoute);
+    setSelectedPointId(nextRoute.points[0]?.id);
+    setActivePointIndex(0);
+    setNavigating(false);
+    setToast('已重新生成 AI 路线地图');
+    window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+
+  const copyRouteCopy = async () => {
+    const text = smartRoute.sceneryAnalysis.socialCopy;
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast('沿途小红书文案已复制');
+    } catch {
+      setToast('浏览器暂不允许复制，请手动选中文案');
+    }
+  };
+
+  const simulateNavigation = () => {
+    if (navigationTimerRef.current) {
+      window.clearInterval(navigationTimerRef.current);
+    }
+    setNavigating(true);
+    setActivePointIndex(0);
+    setSelectedPointId(smartRoute.points[0]?.id);
+    let index = 0;
+    navigationTimerRef.current = window.setInterval(() => {
+      index += 1;
+      if (index >= smartRoute.points.length) {
+        window.clearInterval(navigationTimerRef.current);
+        setNavigating(false);
+        setToast('模拟导航已完成');
+        return;
+      }
+      setActivePointIndex(index);
+      setSelectedPointId(smartRoute.points[index].id);
+    }, 900);
+    setToast('正在模拟导航，Marker 将按路线高亮');
+  };
+
+  const selectRoutePoint = (point: RoutePoint) => {
+    setSelectedPointId(point.id);
+    const index = smartRoute.points.findIndex((item) => item.id === point.id);
+    if (index >= 0) {
+      setActivePointIndex(index);
+    }
   };
 
   return (
@@ -94,7 +210,7 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
                 {cities.map((city) => (
                   <button
                     key={city.name}
-                    onClick={() => setForm((prev) => ({ ...prev, city: city.name }))}
+                    onClick={() => updateCity(city.name)}
                     className={`rounded-2xl px-3 py-3 text-sm font-black transition active:scale-95 ${
                       form.city === city.name ? 'bg-ink text-white' : 'bg-white/70 text-ink/70 hover:bg-white'
                     }`}
@@ -102,6 +218,35 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
                     {city.name}
                   </button>
                 ))}
+              </div>
+            </Field>
+
+            <Field label="定位与出发地">
+              <div className="rounded-3xl bg-white/70 p-3 shadow-sm">
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <button
+                    onClick={useCurrentLocation}
+                    disabled={locating}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-river px-4 py-3 text-sm font-black text-white transition hover:bg-ink active:scale-95 disabled:opacity-70"
+                  >
+                    {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                    使用当前位置
+                  </button>
+                  <select
+                    value={location.name}
+                    onChange={(event) => chooseMockLocation(event.target.value)}
+                    className="focus-ring rounded-2xl border border-white/70 bg-white px-3 py-3 text-sm font-bold text-ink"
+                  >
+                    {mockLocationOptions.map((option) => (
+                      <option key={option.name} value={option.name}>{option.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mt-3 rounded-2xl bg-ink/5 p-3 text-xs font-bold leading-6 text-ink/58">
+                  <div className="text-ink">当前城市：{location.city} · 出发点：{location.name}</div>
+                  <div>经纬度：{location.lat.toFixed(4)}, {location.lng.toFixed(4)}</div>
+                  <div>状态：{location.status} · {location.message}</div>
+                </div>
               </div>
             </Field>
 
@@ -199,7 +344,7 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
             </button>
           </section>
 
-          <section className="space-y-5">
+          <section ref={resultRef} className="space-y-5 scroll-mt-28">
             <div className="relative min-h-[260px] overflow-hidden rounded-[1.75rem] bg-ink shadow-soft">
               <img src={selectedCity.imageUrl} alt={`${selectedCity.name}风景`} className="absolute inset-0 h-full w-full object-cover opacity-85" />
               <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/30 to-transparent" />
@@ -223,6 +368,23 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
                 </div>
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-2">
+              <ActionButton icon={Route} label="重新生成路线" onClick={regenerateRoute} />
+              <ActionButton icon={Sparkles} label={showInsights ? '收起沿途记录点' : '查看沿途记录点'} onClick={() => setShowInsights((prev) => !prev)} />
+              <ActionButton icon={Copy} label="复制小红书文案" onClick={copyRouteCopy} />
+              <ActionButton icon={Navigation} label={navigating ? '导航模拟中' : '模拟导航'} onClick={simulateNavigation} disabled={navigating} />
+            </div>
+
+            <RouteMap
+              route={smartRoute}
+              selectedPointId={selectedPointId}
+              activePointIndex={activePointIndex}
+              navigating={navigating}
+              onSelectPoint={selectRoutePoint}
+            />
+
+            {showInsights && <RouteInsightPanel route={smartRoute} />}
 
             <div className="grid gap-5 lg:grid-cols-2">
               {plan.days.map((day) => (
@@ -323,5 +485,18 @@ function InfoPanel({ icon: Icon, title, items }: { icon: typeof MapPin; title: s
         ))}
       </div>
     </div>
+  );
+}
+
+function ActionButton({ icon: Icon, label, onClick, disabled = false }: { icon: typeof Route; label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-ink shadow-sm ring-1 ring-ink/5 transition hover:-translate-y-0.5 hover:bg-ink hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
   );
 }

@@ -20,6 +20,8 @@ npm run preview
 
 - 首页 Landing Page：项目 Logo、Slogan、湖北城市入口、游客/景区/民宿/文旅部门价值展示。
 - AI 旅行规划页：目的地、天数、预算、兴趣、人群和自然语言输入，模拟生成路线、预算、交通、美食、避坑、文案和短视频脚本。
+- 定位 + AI 路线地图：支持浏览器定位、Mock 出发地、模拟高德地图风格路线、Marker 点位详情和路线导航高亮。
+- 沿途 AI 观察：根据路线生成风景亮点、最佳拍照时间、短视频镜头、社交文案和不同人群记录重点。
 - 景点 AI 讲解页：三峡大坝、黄鹤楼、恩施大峡谷、荆州古城、武当山、东湖，支持通俗版、年轻人版、亲子版、短视频口播、朋友圈文案、拍照建议。
 - 民宿/景区商家后台页：生成周边一日游、欢迎语、入住提醒、周边美食、短视频宣传脚本、小红书种草文案和客服自动回复。
 - 城市文旅数据看板页：热门城市、热门兴趣标签、预算分布、高热度景点、传播建议和关键词云。
@@ -38,6 +40,19 @@ npm run preview
 - 社会价值：降低游客攻略成本，帮助景区、民宿和文旅部门获得低门槛数字化能力，提升湖北文旅资源的年轻化传播力。
 - 创业可行性：覆盖 C 端会员订阅、B 端景区 AI 讲解系统、民宿酒店 AI 住客服务助手、文旅部门数据看板、本地商户广告推荐和联名路线服务。
 
+## 定位与路线地图 Demo
+
+AI 规划页新增了“定位 + 路线 + 沿途记录点”能力：
+
+- `src/services/locationService.ts`：封装浏览器 Geolocation 调用、定位失败处理和 Mock 出发地。
+- `src/services/mapService.ts`：封装路线生成入口，后续可替换为高德路径规划结果。
+- `src/data/routeData.ts`：内置武汉、宜昌、恩施、荆州、襄阳、黄石的 Mock 路线、经纬度、拍照建议和沿途观察。
+- `src/components/RouteMap.tsx`：用 SVG/CSS 模拟地图路线、Marker、路线折线和导航高亮。
+- `src/components/RouteInsightPanel.tsx`：展示沿途风景亮点、拍照时间、短视频镜头和人群化记录建议。
+- `src/types/route.ts`：定义 `RoutePoint`、`SmartRoute`、`UserLocation` 等结构。
+
+当前地图为前端模拟 Demo，不依赖真实后端。用户可以点击“使用当前位置”调用浏览器定位；如果拒绝授权或浏览器不支持定位，系统会回退到武汉站、宜昌东站、恩施站、荆州站、襄阳东站、黄石北站等 Mock 出发地。
+
 ## 后续接入真实 AI API 的位置
 
 当前项目不依赖真实后端，AI 结果由前端 Mock 函数生成：
@@ -45,9 +60,23 @@ npm run preview
 - `src/utils/aiGenerator.ts`
   - `generateTravelPlan`：旅行方案生成。
   - `generateBusinessPlan`：商家住客服务方案生成。
+- `src/services/locationService.ts`
+  - 可接入浏览器 Geolocation 和高德逆地理编码，把经纬度转换为真实城市、道路和 POI。
+- `src/services/mapService.ts`
+  - 可接入高德地图 JS API / Web 服务 API，替换 Mock 路线为真实驾车、公交、步行路径规划。
+- `src/data/routeData.ts`
+  - 可替换为城市文旅知识库、景区开放数据、天气接口和本地商户数据。
 
 后续接入真实模型时，可把这两个函数替换为 API 请求，例如：
 
 1. 在前端调用自建 `/api/generate-travel-plan` 和 `/api/generate-business-plan`。
 2. 服务端接入大模型、地图 API、景区开放数据、OTA 数据和商家 CRM。
 3. 保持返回结构与 `TravelPlan`、`BusinessPlan` 类型一致，即可复用现有页面组件。
+
+## 后续接入高德地图 API 的位置
+
+建议分三步替换 Mock 能力：
+
+1. 高德地图 JS API：在 `RouteMap.tsx` 中用真实地图容器替换 SVG 模拟地图，使用 Polyline 绘制真实路线。
+2. 高德 Web 服务 API：在 `mapService.ts` 中接入 POI 搜索、路径规划、地理编码和逆地理编码。
+3. 天气与真实 AI API：根据天气、开放时间、拥堵情况和用户偏好，动态生成拍照建议、避坑提醒、短视频脚本和朋友圈文案。
