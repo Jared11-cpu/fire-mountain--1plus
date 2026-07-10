@@ -17,10 +17,8 @@ await writeFile(
 import { createReadStream, existsSync } from 'node:fs';
 import { stat, readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const serverDir = fileURLToPath(new URL('.', import.meta.url));
-const publicDir = resolve(serverDir, '..');
+const publicDir = resolve(process.cwd(), 'dist');
 const indexHtml = join(publicDir, 'index.html');
 
 const mimeTypes = {
