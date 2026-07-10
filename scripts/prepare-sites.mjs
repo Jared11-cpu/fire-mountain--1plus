@@ -16,7 +16,14 @@ await writeFile(
   `export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const assetResponse = await env.ASSETS.fetch(request);
+    let assetResponse = await env.ASSETS.fetch(request);
+
+    if (assetResponse.status !== 404) {
+      return assetResponse;
+    }
+
+    const clientUrl = new URL('/client' + url.pathname, url);
+    assetResponse = await env.ASSETS.fetch(new Request(clientUrl, request));
 
     if (assetResponse.status !== 404) {
       return assetResponse;
@@ -24,7 +31,13 @@ await writeFile(
 
     if (!url.pathname.includes('.')) {
       const indexUrl = new URL('/index.html', url);
-      return env.ASSETS.fetch(new Request(indexUrl, request));
+      const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
+
+      if (indexResponse.status !== 404) {
+        return indexResponse;
+      }
+
+      return env.ASSETS.fetch(new Request(new URL('/client/index.html', url), request));
     }
 
     return assetResponse;
