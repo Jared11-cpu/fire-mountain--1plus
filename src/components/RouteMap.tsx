@@ -15,7 +15,7 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
   const [status, setStatus] = useState<'loading'|'ready'|'fallback'>('loading');
   const [message, setMessage] = useState('正在载入高德真实地图…');
   const selected = route.points.find((p) => p.id === selectedPointId) ?? route.points[0];
-  const amapEnabled = import.meta.env.VITE_AMAP_ENABLED === 'true';
+  const amapEnabled = import.meta.env.VITE_AMAP_ENABLED !== 'false';
   const key = import.meta.env.VITE_AMAP_KEY as string | undefined;
   const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE as string | undefined;
 
@@ -28,22 +28,23 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
         if (!window.AMap) await new Promise<void>((resolve, reject) => {
           const existing = document.querySelector<HTMLScriptElement>('script[data-amap]');
           if (existing) { existing.addEventListener('load', () => resolve(), { once: true }); existing.addEventListener('error', reject, { once: true }); return; }
-          const script = document.createElement('script'); script.dataset.amap = 'true'; script.src = `https://webapi.amap.com/maps?v=2.0&key=${key}`; script.onload = () => resolve(); script.onerror = reject; document.head.appendChild(script);
+          const script = document.createElement('script'); script.dataset.amap = 'true'; script.src = `https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.Driving`; script.onload = () => resolve(); script.onerror = reject; document.head.appendChild(script);
         });
         if (disposed || !container.current || !window.AMap) return;
         const AMap = window.AMap;
         mapRef.current?.destroy();
-        const map = new AMap.Map(container.current, { zoom: 12, center: [route.points[0].lng, route.points[0].lat], mapStyle: 'amap://styles/whitesmoke' });
-        mapRef.current = map;
-        const path = route.points.map((p) => [p.lng, p.lat]);
-        const line = new AMap.Polyline({ path, strokeColor: '#0E6B72', strokeWeight: 7, showDir: true, lineJoin: 'round' });
-        map.add(line);
-        markerRef.current = route.points.map((point, index) => {
-          const marker = new AMap.Marker({ position: [point.lng, point.lat], title: point.name, label: { content: `<span class="amap-route-label">${index + 1}</span>`, direction: 'top' } });
-          marker.on('click', () => onSelectPoint(point)); map.add(marker); return marker;
+        const map = new AMap.Map(container.current, {
+          zoom: 12,
+          center: [route.points[0].lng, route.points[0].lat],
+          viewMode: '2D',
         });
-        map.setFitView([line, ...markerRef.current], false, [60, 60, 60, 60]);
-        setStatus('ready'); setMessage('高德地图已连接，点击编号可联动行程。');
+        mapRef.current = map;
+
+        markerRef.current = route.points.map((point, index) => createRouteMarker(AMap, map, point, index, onSelectPoint));
+        const routeResult = await drawAmapDrivingRoute(AMap, map, route.points);
+        map.setFitView([routeResult.overlay, ...markerRef.current].filter(Boolean), false, [90, 90, 90, 90]);
+        setStatus('ready');
+        setMessage(routeResult.planned ? '高德地图已连接，已按真实道路生成实时导航路线。' : '高德底图已连接，路径规划暂不可用，请检查 Key 域名白名单或服务权限。');
       } catch { setStatus('fallback'); setMessage('真实地图加载失败，已安全回退到演示路线点列表。'); }
     }
     mount(); return () => { disposed = true; mapRef.current?.destroy(); mapRef.current = undefined; };
@@ -62,6 +63,84 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
       {!mapOnly&&<aside className="bg-[#fbfaf5] p-5">{selected&&<><div className="text-xs font-black tracking-[.16em] text-tower">STOP {route.points.findIndex(p=>p.id===selected.id)+1}</div><h4 className="mt-2 font-display text-3xl font-black">{selected.name}</h4><div className="mt-2 flex gap-2 text-xs font-bold text-ink/50"><span>{getPointTypeLabel(selected.type)}</span><span>·</span><span>{selected.time}</span><span>·</span><span>{selected.stayMinutes} 分钟</span></div><p className="mt-5 leading-7 text-ink/68">{selected.reason}</p><div className="mt-4 rounded-xl border-l-4 border-tower bg-white p-4 text-sm leading-6"><b>拍照：</b>{selected.photoTip}</div><div className="mt-3 rounded-xl bg-river/5 p-4 text-sm leading-6"><b>手账：</b>{selected.recordTip}</div></>}</aside>}
     </div>
   </section>;
+}
+
+function createRouteMarker(AMap: any, map: any, point: RoutePoint, index: number, onSelectPoint: (point: RoutePoint) => void) {
+  const color = pointColor(point.type);
+  const marker = new AMap.Marker({
+    position: [point.lng, point.lat],
+    title: point.name,
+    anchor: 'bottom-center',
+    content: `<button class="amap-smart-marker" style="--marker:${color}" aria-label="${index + 1} ${point.name}"><span>${index + 1}</span></button>`,
+    label: {
+      content: `<span class="amap-route-name">${point.name}</span>`,
+      direction: 'bottom',
+      offset: new AMap.Pixel(0, 8),
+    },
+  });
+  marker.on('click', () => onSelectPoint(point));
+  map.add(marker);
+  return marker;
+}
+
+function drawAmapDrivingRoute(AMap: any, map: any, points: RoutePoint[]) {
+  return new Promise<{ overlay: any; planned: boolean }>((resolve, reject) => {
+    const path = points.map((point) => [point.lng, point.lat]);
+    const lngLats = points.map((point) => new AMap.LngLat(point.lng, point.lat));
+    const fallbackLine = () => {
+      const line = new AMap.Polyline({
+        path,
+        strokeColor: '#0E6B72',
+        strokeWeight: 8,
+        strokeOpacity: 0.9,
+        showDir: true,
+        lineJoin: 'round',
+      });
+      map.add(line);
+      resolve({ overlay: line, planned: false });
+    };
+
+    if (points.length < 2 || !AMap.plugin) {
+      fallbackLine();
+      return;
+    }
+
+    AMap.plugin('AMap.Driving', () => {
+      try {
+        const driving = new AMap.Driving({
+          map,
+          hideMarkers: true,
+          showTraffic: true,
+          policy: AMap.DrivingPolicy?.LEAST_TIME,
+        });
+        const start = lngLats[0];
+        const end = lngLats[lngLats.length - 1];
+        const waypoints = lngLats.slice(1, -1);
+        driving.search(start, end, { waypoints }, (status: string) => {
+          if (status === 'complete') {
+            resolve({ overlay: driving, planned: true });
+          } else {
+            fallbackLine();
+          }
+        });
+      } catch {
+        reject(new Error('AMap driving route failed'));
+      }
+    });
+  });
+}
+
+function pointColor(type: RoutePoint['type']) {
+  const colors: Record<RoutePoint['type'], string> = {
+    start: '#12a885',
+    scenic: '#1976d2',
+    food: '#f97316',
+    photo: '#ec4899',
+    rest: '#64748b',
+    hotel: '#7c3aed',
+    end: '#7c3aed',
+  };
+  return colors[type];
 }
 
 function FallbackRouteMap({ route, selectedPointId, onSelectPoint }: { route: SmartRoute; selectedPointId?: string; onSelectPoint: (point: RoutePoint) => void }) {

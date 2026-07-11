@@ -6,11 +6,11 @@ import { readEntries } from '../services/journalStorage';
 type LandingPageProps = {
   onStart: (prompt?: string) => void;
   onCitySelect: (city: CityName) => void;
+  onFootprintDetail: (type: 'places' | 'mileage' | 'cities' | 'photos') => void;
 };
 
-export function LandingPage({ onStart, onCitySelect }: LandingPageProps) {
+export function LandingPage({ onStart, onCitySelect, onFootprintDetail }: LandingPageProps) {
   const [prompt, setPrompt] = useState('');
-  const [activeStat, setActiveStat] = useState<'places'|'mileage'|'cities'|'photos'|null>(null);
   const entries = useMemo(() => readEntries(), []);
   const stats = useMemo(() => {
     const places = new Set(entries.map((item) => item.pointName)).size;
@@ -98,12 +98,11 @@ export function LandingPage({ onStart, onCitySelect }: LandingPageProps) {
           <div className="overflow-hidden rounded-[2rem] bg-ink p-7 text-white shadow-soft md:p-10">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="text-xs font-black tracking-[.22em] text-jade">MY TRAVEL FOOTPRINT</div><h2 className="mt-2 font-display text-3xl font-black">我的湖北旅行足迹</h2></div><p className="text-sm text-white/45">数据来自保存在本设备的旅行手账</p></div>
             <div className="mt-7 grid grid-cols-2 divide-x divide-white/10 md:grid-cols-4">
-              <Stat value={stats.places} unit="处" label="记录地点" active={activeStat==='places'} onClick={()=>setActiveStat(activeStat==='places'?null:'places')} />
-              <Stat value={stats.mileage} unit="km" label="累计里程" active={activeStat==='mileage'} onClick={()=>setActiveStat(activeStat==='mileage'?null:'mileage')} />
-              <Stat value={stats.citiesVisited} unit="座" label="到访城市" active={activeStat==='cities'} onClick={()=>setActiveStat(activeStat==='cities'?null:'cities')} />
-              <Stat value={stats.photos} unit="张" label="真实照片" active={activeStat==='photos'} onClick={()=>setActiveStat(activeStat==='photos'?null:'photos')} />
+              <Stat value={stats.places} unit="处" label="记录地点" onClick={()=>onFootprintDetail('places')} />
+              <Stat value={stats.mileage} unit="km" label="累计里程" onClick={()=>onFootprintDetail('mileage')} />
+              <Stat value={stats.citiesVisited} unit="座" label="到访城市" onClick={()=>onFootprintDetail('cities')} />
+              <Stat value={stats.photos} unit="张" label="真实照片" onClick={()=>onFootprintDetail('photos')} />
             </div>
-            {activeStat && <div className="mt-5 rounded-2xl border border-white/10 bg-white/7 p-5"><StatDetails type={activeStat} entries={entries} mileage={stats.mileage} /></div>}
           </div>
         </div>
       </section>
@@ -111,12 +110,4 @@ export function LandingPage({ onStart, onCitySelect }: LandingPageProps) {
   );
 }
 
-function Stat({value,unit,label,active,onClick}:{value:number;unit:string;label:string;active:boolean;onClick:()=>void}) { return <button onClick={onClick} className={`px-4 py-4 text-center transition first:pl-0 last:pr-0 ${active?'rounded-xl bg-white/10':'hover:bg-white/5'}`}><div><span className="font-display text-4xl font-black text-[#f4d17a] md:text-5xl">{value}</span><span className="ml-1 text-sm font-black text-white/55">{unit}</span></div><div className="mt-2 text-sm font-bold text-white/55">{label} · 点击查看</div></button> }
-
-function StatDetails({type,entries,mileage}:{type:'places'|'mileage'|'cities'|'photos';entries:ReturnType<typeof readEntries>;mileage:number}) {
-  if (!entries.length) return <p className="text-sm text-white/60">还没有旅行记录。前往“旅行手账”上传第一张真实照片后，这里会自动生成足迹详情。</p>;
-  if (type==='places') return <div><b>记录过的地点</b><div className="mt-3 flex flex-wrap gap-2">{[...new Set(entries.map(e=>e.pointName))].map(x=><span key={x} className="rounded-full bg-white/10 px-3 py-2 text-sm">{x}</span>)}</div></div>;
-  if (type==='cities') return <div><b>到访城市</b><div className="mt-3 flex flex-wrap gap-2">{[...new Set(entries.map(e=>e.city))].map(x=><span key={x} className="rounded-full bg-white/10 px-3 py-2 text-sm">{x}</span>)}</div></div>;
-  if (type==='photos') return <div><b>照片记录</b><div className="mt-3 space-y-2">{entries.map(e=><div key={e.id} className="flex justify-between rounded-xl bg-white/7 px-3 py-2 text-sm"><span>{e.pointName}</span><span>{e.photoIds.length} 张</span></div>)}</div></div>;
-  return <div><b>累计里程估算：{mileage} km</b><p className="mt-2 text-sm leading-6 text-white/55">根据已记录地点数量，以相邻旅行记录平均 8.6 km 估算；接入真实轨迹后将替换为 GPS 路线里程。</p></div>;
-}
+function Stat({value,unit,label,onClick}:{value:number;unit:string;label:string;onClick:()=>void}) { return <button onClick={onClick} className="px-4 py-4 text-center transition hover:-translate-y-1 hover:bg-white/5 active:scale-95 first:pl-0 last:pr-0"><div><span className="font-display text-4xl font-black text-[#f4d17a] md:text-5xl">{value}</span><span className="ml-1 text-sm font-black text-white/55">{unit}</span></div><div className="mt-2 text-sm font-bold text-white/55">{label} · 进入详情</div></button> }

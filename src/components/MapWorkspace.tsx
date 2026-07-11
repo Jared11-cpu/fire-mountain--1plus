@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { CircleDollarSign, Bus, Camera, ChevronRight, Clock3, Copy, ExternalLink, MapPin, Navigation, RefreshCw, Sparkles, TrainFront, Utensils } from 'lucide-react';
+import { CircleDollarSign, Bus, CalendarDays, Camera, CheckCircle2, ChevronRight, Clock3, Copy, ExternalLink, MapPin, Navigation, PencilLine, RefreshCw, Sparkles, TrainFront, Utensils } from 'lucide-react';
 import type { TravelPlan } from '../utils/aiGenerator';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { RouteMap } from './RouteMap';
 
-type Tab = 'overview' | 'stops' | 'days' | 'transport' | 'food' | 'budget';
+type Tab = 'overview' | 'stops' | 'days' | 'records' | 'transport' | 'food' | 'budget';
 
 const tabs: Array<{ id: Tab; label: string; short: string; icon: typeof MapPin }> = [
   { id: 'overview', label: '概览', short: 'AI', icon: Sparkles },
   { id: 'stops', label: '路线', short: '线', icon: MapPin },
   { id: 'days', label: '日程', short: '日', icon: Clock3 },
+  { id: 'records', label: '记录', short: '记', icon: CalendarDays },
   { id: 'transport', label: '交通', short: '车', icon: Bus },
   { id: 'food', label: '美食', short: '食', icon: Utensils },
   { id: 'budget', label: '预算', short: '¥', icon: CircleDollarSign },
@@ -75,6 +76,7 @@ export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, n
             {tab === 'overview' && <OverviewPanel route={route} plan={plan} selected={selected} />}
             {tab === 'stops' && <StopsPanel route={route} selectedPointId={selectedPointId} imageUrl={imageUrl} onSelectPoint={onSelectPoint} />}
             {tab === 'days' && <DaysPanel plan={plan} />}
+            {tab === 'records' && <DailyRecordPanel route={route} plan={plan} onSelectPoint={onSelectPoint} />}
             {tab === 'transport' && <TransportPanel city={route.city} items={plan.transport} />}
             {tab === 'food' && <FoodPanel route={route} plan={plan} />}
             {tab === 'budget' && <BudgetPanel plan={plan} />}
@@ -166,6 +168,94 @@ function DaysPanel({ plan }: { plan: TravelPlan }) {
   return <div><SideTitle eyebrow="DAY BY DAY" title="每日行程安排" desc="把时间、地点和停留逻辑放在同一条时间线上。"/>{plan.days.map(day=><div key={day.day} className="mb-5"><div className="sticky top-0 z-10 mb-2 rounded-xl bg-ink px-3 py-2 text-white"><b>{day.day}</b><span className="ml-2 text-xs text-white/60">{day.theme}</span></div>{day.items.map(item=><div key={`${day.day}-${item.time}`} className="relative ml-3 border-l border-river/25 py-3 pl-5 before:absolute before:-left-1.5 before:top-5 before:h-3 before:w-3 before:rounded-full before:bg-river"><div className="text-xs font-black text-tower">{item.time}</div><div className="font-black">{item.place}</div><p className="mt-1 text-sm leading-6 text-ink/55">{item.reason}</p></div>)}</div>)}</div>;
 }
 
+function DailyRecordPanel({ route, plan, onSelectPoint }: { route: SmartRoute; plan: TravelPlan; onSelectPoint: (point: RoutePoint) => void }) {
+  const [startDate, setStartDate] = useState(() => toInputDate(new Date()));
+  const [endDate, setEndDate] = useState(() => toInputDate(addDays(new Date(), Math.max(0, plan.days.length - 1))));
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [notes, setNotes] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    setEndDate(toInputDate(addDays(parseInputDate(startDate), Math.max(0, plan.days.length - 1))));
+  }, [plan.days.length, startDate]);
+
+  const togglePoint = (point: RoutePoint) => {
+    setChecked((prev) => ({ ...prev, [point.id]: !prev[point.id] }));
+    onSelectPoint(point);
+  };
+  const dayCount = Math.max(1, plan.days.length);
+  const rangeText = `${formatMonthDay(startDate)} - ${formatMonthDay(endDate)}`;
+  const doneCount = Object.values(checked).filter(Boolean).length;
+
+  return (
+    <div>
+      <SideTitle eyebrow="DAILY CHECK-IN" title="每日记录与打卡" desc="自定义旅行日期，把路线点变成可勾选的现场记录。" />
+      <div className="rounded-2xl bg-ink p-4 text-white">
+        <div className="text-xs font-black tracking-[0.18em] text-jade">TRAVEL DATE</div>
+        <div className="mt-2 font-display text-3xl font-black">{rangeText}</div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <DateField label="开始" value={startDate} onChange={setStartDate} />
+          <DateField label="结束" value={endDate} onChange={setEndDate} />
+        </div>
+        <div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-white/70">{doneCount} 个点已打卡 · 共 {route.points.length} 个路线点</div>
+      </div>
+
+      <div className="mt-4 space-y-4">
+        {Array.from({ length: dayCount }, (_, index) => {
+          const day = index + 1;
+          const date = addDays(parseInputDate(startDate), index);
+          const points = route.points.filter((point) => (point.day ?? 1) === day || (day === 1 && point.type === 'start'));
+          return (
+            <section key={day} className="rounded-2xl border border-ink/8 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-black text-tower">Day {day}</div>
+                  <h4 className="font-display text-xl font-black text-ink">{formatMonthDay(toInputDate(date))}</h4>
+                </div>
+                <span className="rounded-full bg-river/10 px-3 py-1 text-xs font-black text-river">{points.filter((point) => checked[point.id]).length}/{points.length} 打卡</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {points.map((point) => (
+                  <button
+                    key={point.id}
+                    onClick={() => togglePoint(point)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.99] ${
+                      checked[point.id] ? 'bg-jade/12 text-ink ring-1 ring-jade/25' : 'bg-mist text-ink/62 hover:bg-river/8'
+                    }`}
+                  >
+                    <CheckCircle2 className={`h-5 w-5 shrink-0 ${checked[point.id] ? 'text-jade' : 'text-ink/25'}`} />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black">{point.time} · {point.name}</div>
+                      <div className="mt-0.5 truncate text-xs font-semibold text-ink/45">{point.photoTip}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <label className="mt-3 block">
+                <span className="mb-2 flex items-center gap-1 text-xs font-black text-ink/42"><PencilLine className="h-3.5 w-3.5" />今日自定义记录</span>
+                <textarea
+                  value={notes[day] ?? ''}
+                  onChange={(event) => setNotes((prev) => ({ ...prev, [day]: event.target.value }))}
+                  placeholder="写下当天最值得记录的风景、花费、心情或短视频镜头..."
+                  className="focus-ring min-h-20 w-full resize-none rounded-xl border border-ink/8 bg-[#fffdf7] px-3 py-2 text-sm leading-6"
+                />
+              </label>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="rounded-xl bg-white/10 px-3 py-2">
+      <span className="block text-[10px] font-black text-white/45">{label}</span>
+      <input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full bg-transparent text-sm font-black text-white outline-none [color-scheme:dark]" />
+    </label>
+  );
+}
+
 function FoodPanel({ route, plan }: { route: SmartRoute; plan: TravelPlan }) {
   const foodStops = route.points.filter((point) => point.type === 'food');
   const foodItems = foodStops.length > 0
@@ -191,6 +281,29 @@ function RealPlaceImage({query,fallback,alt}:{query:string;fallback:string;alt:s
 
 function budgetTotal(plan: TravelPlan) {
   return plan.budget.reduce((sum, row) => sum + row.amount, 0);
+}
+
+function toInputDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseInputDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatMonthDay(value: string) {
+  const date = parseInputDate(value);
+  return `${date.getMonth() + 1}月${date.getDate()}号`;
 }
 
 const scheduleByCity: Record<string,{rail:string[];bus:string[]}> = {

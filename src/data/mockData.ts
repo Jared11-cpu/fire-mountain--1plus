@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 const sceneryBase = `${import.meta.env.BASE_URL}scenery/`;
+const uploadBase = `${import.meta.env.BASE_URL}uploads/`;
 
 export type CityName = '宜昌' | '武汉' | '恩施' | '荆州' | '襄阳' | '黄石';
 
@@ -75,8 +76,8 @@ export const cities: City[] = [
     title: '峡谷、溶洞与短视频大片',
     tags: ['自然风光', '土家文化', '云海'],
     image: '峡谷云阶',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Enshi%20grand%20canyon%202025%2010.jpg?width=1280',
-    imageCredit: { author: 'Wimwamble', license: 'CC BY-SA 4.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Enshi_grand_canyon_2025_10.jpg' },
+    imageUrl: `${uploadBase}enshi-cover.jpg`,
+    imageCredit: { author: '本地上传图片', license: '演示素材', sourceUrl: `${uploadBase}enshi-cover.jpg` },
     gradient: 'from-[#1F513F] via-jade to-[#8DBB66]',
   },
   {
@@ -84,8 +85,8 @@ export const cities: City[] = [
     title: '古城墙与楚文化沉浸',
     tags: ['古城', '博物馆', '历史旅拍'],
     image: '楚风古城',
-    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Jingzhou%20dongmen.jpg?width=1280',
-    imageCredit: { author: 'Popolon', license: 'CC BY-SA 3.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Jingzhou_dongmen.jpg' },
+    imageUrl: `${uploadBase}jingzhou-cover.jpg`,
+    imageCredit: { author: '本地上传图片', license: '演示素材', sourceUrl: `${uploadBase}jingzhou-cover.jpg` },
     gradient: 'from-[#693E2E] via-tower to-[#D8A64D]',
   },
   {
@@ -102,8 +103,8 @@ export const cities: City[] = [
     title: '矿冶工业遗产与湖山周末',
     tags: ['矿山公园', '仙岛湖', '工业风'],
     image: '矿冶湖光',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/%E9%BB%84%E7%9F%B3%E6%B9%96%E4%B8%8E%E5%B1%B1.jpg/1280px-%E9%BB%84%E7%9F%B3%E6%B9%96%E4%B8%8E%E5%B1%B1.jpg',
-    imageCredit: { author: 'Cangminzho', license: 'CC BY-SA 4.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:黄石湖与山.jpg' },
+    imageUrl: `${uploadBase}huangshi-cover.jpg`,
+    imageCredit: { author: '本地上传图片', license: '演示素材', sourceUrl: `${uploadBase}huangshi-cover.jpg` },
     gradient: 'from-[#293241] via-[#587D71] to-[#D8A64D]',
   },
 ];

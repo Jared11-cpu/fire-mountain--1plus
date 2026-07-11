@@ -264,15 +264,34 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
                 </div>
               </Field>
               <Field label="预算">
-                <select
-                  value={form.budget}
-                  onChange={(event) => setForm((prev) => ({ ...prev, budget: Number(event.target.value) }))}
-                  className="focus-ring w-full rounded-2xl border border-white/70 bg-white/85 px-4 py-3 font-bold text-ink shadow-sm"
-                >
-                  {budgetOptions.map((budget) => (
-                    <option key={budget} value={budget}>{budget} 元</option>
-                  ))}
-                </select>
+                <div className="rounded-3xl bg-white/70 p-3 shadow-sm">
+                  <div className="flex items-center rounded-2xl border border-white/70 bg-white px-4 py-3 shadow-sm focus-within:ring-4 focus-within:ring-jade/20">
+                    <input
+                      type="number"
+                      min={0}
+                      step={50}
+                      value={form.budget}
+                      onChange={(event) => setForm((prev) => ({ ...prev, budget: Math.max(0, Number(event.target.value) || 0) }))}
+                      className="w-full bg-transparent text-lg font-black text-ink outline-none"
+                      aria-label="自定义预算金额"
+                    />
+                    <span className="ml-2 shrink-0 text-sm font-black text-ink/45">元</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {budgetOptions.map((budget) => (
+                      <button
+                        key={budget}
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, budget }))}
+                        className={`rounded-xl px-2 py-2 text-xs font-black transition active:scale-95 ${
+                          form.budget === budget ? 'bg-ink text-white' : 'bg-ink/5 text-ink/55 hover:bg-river/10 hover:text-river'
+                        }`}
+                      >
+                        {budget}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </Field>
             </div>
 
