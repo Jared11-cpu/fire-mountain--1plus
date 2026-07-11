@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, Clock3, LocateFixed, MapPin, Navigation, Route as RouteIcon, Utensils } from 'lucide-react';
+import { Camera, Clock3, LocateFixed, MapPin, Navigation, Route as RouteIcon, Utensils } from 'lucide-react';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { getPointTypeLabel } from '../services/mapService';
 
@@ -54,10 +54,69 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
     mapRef.current.setZoomAndCenter(15, [selected.lng, selected.lat], false, 350);
   }, [selected?.id, status]);
 
+  const fallback = status === 'fallback';
+
   return <section className={`overflow-hidden bg-white ${mapOnly ? 'h-full' : 'rounded-[1.75rem] shadow-soft ring-1 ring-ink/5'}`}>
     {!mapOnly && <div className="flex flex-col gap-4 border-b border-ink/5 p-5 md:flex-row md:items-center md:justify-between"><div><div className="inline-flex items-center gap-2 text-xs font-black tracking-[.16em] text-river"><Navigation className="h-4 w-4"/>LIVE ROUTE</div><h3 className="mt-2 font-display text-2xl font-black">{route.title}</h3><p className="mt-1 text-sm text-ink/50">{message}</p></div><div className="flex gap-2 text-xs font-bold"><span className="rounded-full bg-mist px-3 py-2">{route.totalDistanceKm} km</span><span className="rounded-full bg-mist px-3 py-2">{route.recommendedStartTime} 出发</span></div></div>}
-    <div className={mapOnly ? 'h-full' : 'grid lg:grid-cols-[1.35fr_.65fr]'}><div className={`relative bg-[#e9efec] ${mapOnly ? 'h-full min-h-[620px]' : 'min-h-[430px]'}`}><div ref={container} className={`absolute inset-0 ${status === 'fallback' ? 'hidden' : ''}`}/>{mapOnly&&<div className="absolute left-5 top-5 z-10 max-w-sm rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur"><div className="text-xs font-black tracking-[.16em] text-river">LIVE ROUTE · {route.totalDistanceKm} KM</div><h3 className="mt-1 font-display text-xl font-black">{route.title}</h3><p className="mt-1 text-xs text-ink/50">{message}</p></div>}{status === 'fallback'&&<div className="absolute inset-0 grid place-items-center p-6"><div className="max-w-md text-center"><AlertTriangle className="mx-auto h-9 w-9 text-amber-600"/><h4 className="mt-3 font-display text-2xl font-black">演示数据模式</h4><p className="mt-2 text-sm leading-6 text-ink/55">真实底图暂不可用，仍可点击侧栏路线点查看完整行程。</p><div className="mt-5 flex flex-wrap justify-center gap-2">{route.points.map((p,i)=><button key={p.id} onClick={()=>onSelectPoint(p)} className="rounded-full bg-white px-3 py-2 text-sm font-black shadow-sm">{i+1} {p.name}</button>)}</div></div></div>}</div>
+    <div className={mapOnly ? 'h-full' : 'grid lg:grid-cols-[1.35fr_.65fr]'}><div className={`relative overflow-hidden bg-[#d8f1ee] ${mapOnly ? 'h-full min-h-[620px]' : 'min-h-[430px]'}`}><div ref={container} className={`absolute inset-0 ${fallback ? 'hidden' : ''}`}/>{mapOnly&&<div className="absolute left-5 top-5 z-10 max-w-sm rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur"><div className="text-xs font-black tracking-[.16em] text-river">LIVE ROUTE · {route.totalDistanceKm} KM</div><h3 className="mt-1 font-display text-xl font-black">{route.title}</h3><p className="mt-1 text-xs text-ink/50">{message}</p></div>}{fallback&&<FallbackRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}</div>
       {!mapOnly&&<aside className="bg-[#fbfaf5] p-5">{selected&&<><div className="text-xs font-black tracking-[.16em] text-tower">STOP {route.points.findIndex(p=>p.id===selected.id)+1}</div><h4 className="mt-2 font-display text-3xl font-black">{selected.name}</h4><div className="mt-2 flex gap-2 text-xs font-bold text-ink/50"><span>{getPointTypeLabel(selected.type)}</span><span>·</span><span>{selected.time}</span><span>·</span><span>{selected.stayMinutes} 分钟</span></div><p className="mt-5 leading-7 text-ink/68">{selected.reason}</p><div className="mt-4 rounded-xl border-l-4 border-tower bg-white p-4 text-sm leading-6"><b>拍照：</b>{selected.photoTip}</div><div className="mt-3 rounded-xl bg-river/5 p-4 text-sm leading-6"><b>手账：</b>{selected.recordTip}</div></>}</aside>}
     </div>
   </section>;
+}
+
+function FallbackRouteMap({ route, selectedPointId, onSelectPoint }: { route: SmartRoute; selectedPointId?: string; onSelectPoint: (point: RoutePoint) => void }) {
+  const points = route.points.slice(0, 8);
+  const positions = points.map((_, index) => {
+    const t = points.length <= 1 ? 0 : index / (points.length - 1);
+    return {
+      x: 16 + t * 72 + (index % 2 === 0 ? 0 : 4),
+      y: 74 - Math.sin(t * Math.PI) * 48 + (index % 2 === 0 ? 2 : -5),
+    };
+  });
+  const line = positions.map((p) => `${p.x},${p.y}`).join(' ');
+
+  return (
+    <div className="absolute inset-0 bg-[linear-gradient(135deg,#dff5f2_0%,#c7ecf1_48%,#d9f0d2_100%)]">
+      <div className="absolute -left-16 top-24 h-44 w-[110%] -rotate-6 rounded-full bg-river/20 blur-sm" />
+      <div className="absolute bottom-0 left-0 h-52 w-full bg-jade/20" />
+      <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(#1b70a61a_1px,transparent_1px),linear-gradient(90deg,#1b70a61a_1px,transparent_1px)] [background-size:54px_54px]" />
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+        <path d="M-5 82 C20 62 35 78 55 58 C74 38 82 45 106 26" fill="none" stroke="#ffffff" strokeWidth="5.8" strokeLinecap="round" opacity="0.72" />
+        <path d="M-2 72 C18 58 34 62 50 49 C66 36 81 38 104 18" fill="none" stroke="#78c8e2" strokeWidth="13" strokeLinecap="round" opacity="0.55" />
+        <polyline points={line} fill="none" stroke="#ffffff" strokeWidth="6.2" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={line} fill="none" stroke="#0e6b72" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 3" />
+      </svg>
+      {points.map((point, index) => {
+        const pos = positions[index];
+        const active = point.id === selectedPointId;
+        return (
+          <button
+            key={point.id}
+            onClick={() => onSelectPoint(point)}
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white px-2.5 py-1.5 text-xs font-black text-white shadow-lg transition hover:-translate-y-[60%] active:scale-95 ${active ? 'bg-tower ring-4 ring-tower/25' : 'bg-river'}`}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+          >
+            {index + 1}
+          </button>
+        );
+      })}
+      {points.map((point, index) => {
+        const pos = positions[index];
+        return (
+          <div
+            key={`${point.id}-label`}
+            className="absolute -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-ink shadow-sm"
+            style={{ left: `${pos.x}%`, top: `calc(${pos.y}% + 28px)` }}
+          >
+            {point.name}
+          </div>
+        );
+      })}
+      <div className="absolute bottom-5 right-5 max-w-sm rounded-2xl bg-ink/92 p-4 text-white shadow-xl">
+        <div className="text-xs font-black tracking-[.16em] text-jade">AI ROUTE LIVE DEMO</div>
+        <div className="mt-2 font-display text-xl font-black">{route.city}实况路线图</div>
+        <p className="mt-2 text-sm leading-6 text-white/70">点击地图编号或右侧模块，可联动查看沿路景点、交通、美食与预算。</p>
+      </div>
+    </div>
+  );
 }

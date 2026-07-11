@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Calculator, Camera, Check, Copy, Film, Image as ImageIcon, LocateFixed, Loader2, MapPin, MessageSquareText, Navigation, Route, Sparkles, Utensils } from 'lucide-react';
+import { Check, LocateFixed, Loader2, Sparkles } from 'lucide-react';
 import { budgetOptions, cities, dayOptions, examples, groupOptions, interestOptions, type CityName } from '../data/mockData';
 import { generateTravelPlan, type PlannerInput, type TravelPlan } from '../utils/aiGenerator';
-import { RouteMap } from './RouteMap';
-import { RouteInsightPanel } from './RouteInsightPanel';
 import { MapWorkspace } from './MapWorkspace';
-import { ItineraryImageCard } from './ItineraryImageCard';
 import { generateSmartRoute } from '../services/mapService';
 import { getBrowserLocation, makeMockLocation, mockLocationOptions } from '../services/locationService';
 import type { RoutePoint, SmartRoute, UserLocation } from '../types/route';
@@ -45,12 +42,10 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
     prompt: '我想去宜昌两天一夜，预算 600，喜欢拍照和美食。',
   }, makeMockLocation(initialCity)));
   const [selectedPointId, setSelectedPointId] = useState<string>();
-  const [showInsights, setShowInsights] = useState(true);
   const [navigating, setNavigating] = useState(false);
   const [activePointIndex, setActivePointIndex] = useState(0);
   const [toast, setToast] = useState('已载入宜昌示例方案');
   const resultRef = useRef<HTMLDivElement>(null);
-  const imageCardRef = useRef<HTMLDivElement>(null);
   const navigationTimerRef = useRef<number>();
   const selectedCity = cities.find((city) => city.name === form.city) ?? cities[0];
 
@@ -80,7 +75,6 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
       setSelectedPointId(nextRoute.points[0]?.id);
       setActivePointIndex(0);
       setNavigating(false);
-      setShowInsights(true);
       setLoading(false);
       setToast(`已生成 ${form.city}${form.days}天路线地图与沿途观察`);
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
@@ -372,19 +366,18 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <ActionButton icon={Route} label="重新生成路线" onClick={regenerateRoute} />
-              <ActionButton icon={ImageIcon} label="查看行程图片" onClick={() => imageCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
-              <ActionButton icon={Sparkles} label={showInsights ? '收起沿途记录点' : '查看沿途记录点'} onClick={() => setShowInsights((prev) => !prev)} />
-              <ActionButton icon={Copy} label="复制小红书文案" onClick={copyRouteCopy} />
-              <ActionButton icon={Navigation} label={navigating ? '导航模拟中' : '模拟导航'} onClick={simulateNavigation} disabled={navigating} />
-            </div>
-
-            <div ref={imageCardRef} className="scroll-mt-28">
-              <ItineraryImageCard plan={plan} route={smartRoute} />
-            </div>
-
-            <MapWorkspace route={smartRoute} plan={plan} selectedPointId={selectedPointId} activePointIndex={activePointIndex} navigating={navigating} imageUrl={selectedCity.imageUrl} onSelectPoint={selectRoutePoint} />
+            <MapWorkspace
+              route={smartRoute}
+              plan={plan}
+              selectedPointId={selectedPointId}
+              activePointIndex={activePointIndex}
+              navigating={navigating}
+              imageUrl={selectedCity.imageUrl}
+              onSelectPoint={selectRoutePoint}
+              onRegenerate={regenerateRoute}
+              onCopySocial={copyRouteCopy}
+              onSimulateNavigation={simulateNavigation}
+            />
 
           </section>
         </div>
@@ -399,36 +392,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-2 block text-sm font-black text-ink/72">{label}</span>
       {children}
     </label>
-  );
-}
-
-function InfoPanel({ icon: Icon, title, items }: { icon: typeof MapPin; title: string; items: string[] }) {
-  return (
-    <div className="glass rounded-[1.5rem] p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-3">
-        <Icon className="h-6 w-6 text-river" />
-        <h3 className="font-display text-2xl font-black text-ink">{title}</h3>
-      </div>
-      <div className="space-y-2">
-        {items.map((item) => (
-          <div key={item} className="rounded-2xl bg-white/70 px-4 py-3 text-sm font-semibold leading-6 text-ink/68">
-            {item}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ActionButton({ icon: Icon, label, onClick, disabled = false }: { icon: typeof Route; label: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-ink shadow-sm ring-1 ring-ink/5 transition hover:-translate-y-0.5 hover:bg-ink hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </button>
   );
 }

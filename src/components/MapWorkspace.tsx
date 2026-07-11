@@ -1,46 +1,196 @@
 import { useEffect, useState } from 'react';
-import { CircleDollarSign, Bus, Camera, ChevronRight, Clock3, ExternalLink, MapPin, Sparkles, TrainFront, Utensils } from 'lucide-react';
+import { CircleDollarSign, Bus, Camera, ChevronRight, Clock3, Copy, ExternalLink, MapPin, Navigation, RefreshCw, Sparkles, TrainFront, Utensils } from 'lucide-react';
 import type { TravelPlan } from '../utils/aiGenerator';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { RouteMap } from './RouteMap';
 
-type Tab = 'stops' | 'days' | 'transport' | 'food' | 'budget';
+type Tab = 'overview' | 'stops' | 'days' | 'transport' | 'food' | 'budget';
 
-export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, navigating, imageUrl, onSelectPoint }: {
-  route: SmartRoute; plan: TravelPlan; selectedPointId?: string; activePointIndex: number; navigating: boolean; imageUrl: string; onSelectPoint: (point: RoutePoint) => void;
+const tabs: Array<{ id: Tab; label: string; short: string; icon: typeof MapPin }> = [
+  { id: 'overview', label: '概览', short: 'AI', icon: Sparkles },
+  { id: 'stops', label: '路线', short: '线', icon: MapPin },
+  { id: 'days', label: '日程', short: '日', icon: Clock3 },
+  { id: 'transport', label: '交通', short: '车', icon: Bus },
+  { id: 'food', label: '美食', short: '食', icon: Utensils },
+  { id: 'budget', label: '预算', short: '¥', icon: CircleDollarSign },
+];
+
+export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, navigating, imageUrl, onSelectPoint, onRegenerate, onCopySocial, onSimulateNavigation }: {
+  route: SmartRoute;
+  plan: TravelPlan;
+  selectedPointId?: string;
+  activePointIndex: number;
+  navigating: boolean;
+  imageUrl: string;
+  onSelectPoint: (point: RoutePoint) => void;
+  onRegenerate?: () => void;
+  onCopySocial?: () => void;
+  onSimulateNavigation?: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>('stops');
-  return <section className="map-workspace overflow-hidden rounded-[2rem] border border-ink/10 bg-white shadow-soft">
-    <div className="grid lg:h-[calc(100vh-7rem)] lg:min-h-[680px] lg:grid-cols-[minmax(0,1fr)_390px]">
-      <div className="min-h-[62vh]"><RouteMap route={route} selectedPointId={selectedPointId} activePointIndex={activePointIndex} navigating={navigating} onSelectPoint={onSelectPoint} mapOnly /></div>
-      <aside className="flex min-h-0 flex-col border-l border-ink/10 bg-[#fffdf7]">
-        <div className="border-b border-ink/10 p-4"><div className="grid grid-cols-5 gap-1 rounded-2xl bg-ink/5 p-1">
-          <TabButton active={tab==='stops'} onClick={()=>setTab('stops')} icon={Sparkles} label="沿途" />
-          <TabButton active={tab==='days'} onClick={()=>setTab('days')} icon={Clock3} label="日程" />
-          <TabButton active={tab==='transport'} onClick={()=>setTab('transport')} icon={Bus} label="交通" />
-          <TabButton active={tab==='food'} onClick={()=>setTab('food')} icon={Utensils} label="美食" />
-          <TabButton active={tab==='budget'} onClick={()=>setTab('budget')} icon={CircleDollarSign} label="预算" />
-        </div></div>
-        <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto p-4">
-          {tab==='stops'&&<div><SideTitle eyebrow="SCENERY NOTES" title="沿途风景与记录点" desc="真实照片来自 Wikimedia Commons；点击卡片可聚焦地图。"/><div className="space-y-3">{route.points.map((point,index)=><button key={point.id} onClick={()=>onSelectPoint(point)} className={`group w-full overflow-hidden rounded-2xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg ${point.id===selectedPointId?'border-tower ring-2 ring-tower/15':'border-ink/8'}`}><div className="relative h-32 overflow-hidden bg-ink/10"><RealPlaceImage query={`${point.city} ${point.name}`} fallback={point.imageUrl||imageUrl} alt={`${point.name}真实照片`} /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10"/><span className="absolute left-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-tower text-xs font-black text-white">{index+1}</span><div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white"><div><div className="text-xs font-bold text-white/70">{point.time} · 停留 {point.stayMinutes} 分钟</div><div className="font-display text-xl font-black">{point.name}</div></div><ChevronRight className="h-5 w-5"/></div></div><div className="p-3"><p className="line-clamp-2 text-sm leading-6 text-ink/65">{point.reason}</p><div className="mt-2 flex items-start gap-2 text-xs font-bold leading-5 text-river"><Camera className="mt-0.5 h-3.5 w-3.5 shrink-0"/>{point.photoTip}</div></div></button>)}</div></div>}
-          {tab==='days'&&<div><SideTitle eyebrow="DAY BY DAY" title="每日行程安排" desc="把时间、地点和停留逻辑放在同一条时间线上。"/>{plan.days.map(day=><div key={day.day} className="mb-5"><div className="sticky top-0 z-10 mb-2 rounded-xl bg-ink px-3 py-2 text-white"><b>{day.day}</b><span className="ml-2 text-xs text-white/60">{day.theme}</span></div>{day.items.map(item=><div key={`${day.day}-${item.time}`} className="relative ml-3 border-l border-river/25 py-3 pl-5 before:absolute before:-left-1.5 before:top-5 before:h-3 before:w-3 before:rounded-full before:bg-river"><div className="text-xs font-black text-tower">{item.time}</div><div className="font-black">{item.place}</div><p className="mt-1 text-sm leading-6 text-ink/55">{item.reason}</p></div>)}</div>)}</div>}
-          {tab==='transport'&&<TransportPanel city={route.city} items={plan.transport}/>} 
-          {tab==='food'&&<InfoList title="美食店铺推荐" icon={Utensils} items={plan.food}/>} 
-          {tab==='budget'&&<BudgetPanel plan={plan}/>} 
+  const [tab, setTab] = useState<Tab>('overview');
+  const selected = route.points.find((point) => point.id === selectedPointId) ?? route.points[0];
+
+  return (
+    <section className="map-workspace overflow-hidden rounded-[2rem] border border-ink/10 bg-white shadow-soft">
+      <div className="grid lg:h-[calc(100vh-7rem)] lg:min-h-[720px] lg:grid-cols-[76px_minmax(0,1fr)_410px]">
+        <nav className="flex gap-2 overflow-x-auto bg-ink p-3 text-white lg:flex-col lg:overflow-visible">
+          <div className="hidden h-12 w-12 place-items-center rounded-2xl bg-white/10 font-display text-xl font-black text-jade lg:grid">楚</div>
+          <div className="flex gap-2 lg:mt-5 lg:flex-col">
+            {tabs.map((item) => (
+              <SidebarTab
+                key={item.id}
+                active={tab === item.id}
+                icon={item.icon}
+                short={item.short}
+                label={item.label}
+                onClick={() => setTab(item.id)}
+              />
+            ))}
+          </div>
+        </nav>
+
+        <div className="relative min-h-[68vh] overflow-hidden border-ink/10 lg:border-r">
+          <div className="absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
+            <CommandButton icon={RefreshCw} label="重新规划" onClick={onRegenerate} />
+            <CommandButton icon={Navigation} label={navigating ? '导航中' : '模拟导航'} onClick={onSimulateNavigation} disabled={navigating} />
+            <CommandButton icon={Copy} label="复制文案" onClick={onCopySocial} />
+          </div>
+          <div className="h-full">
+            <RouteMap route={route} selectedPointId={selectedPointId} activePointIndex={activePointIndex} navigating={navigating} onSelectPoint={onSelectPoint} mapOnly />
+          </div>
+          <div className="pointer-events-none absolute bottom-5 left-5 right-5 z-20 grid gap-3 md:grid-cols-3">
+            <Metric label="路线距离" value={`${route.totalDistanceKm}km`} />
+            <Metric label="建议出发" value={route.recommendedStartTime} />
+            <Metric label="预计预算" value={`¥${budgetTotal(plan)}`} />
+          </div>
         </div>
-      </aside>
-    </div>
-  </section>;
+
+        <aside className="flex min-h-0 flex-col bg-[#fffdf7]">
+          <div className="border-b border-ink/10 p-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-river">Interactive Itinerary</div>
+            <h3 className="mt-1 font-display text-2xl font-black text-ink">{route.title}</h3>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink/50">{plan.summary}</p>
+          </div>
+          <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto p-4">
+            {tab === 'overview' && <OverviewPanel route={route} plan={plan} selected={selected} />}
+            {tab === 'stops' && <StopsPanel route={route} selectedPointId={selectedPointId} imageUrl={imageUrl} onSelectPoint={onSelectPoint} />}
+            {tab === 'days' && <DaysPanel plan={plan} />}
+            {tab === 'transport' && <TransportPanel city={route.city} items={plan.transport} />}
+            {tab === 'food' && <FoodPanel route={route} plan={plan} />}
+            {tab === 'budget' && <BudgetPanel plan={plan} />}
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
 }
 
-function TabButton({active,onClick,icon:Icon,label}:{active:boolean;onClick:()=>void;icon:typeof MapPin;label:string}) { return <button onClick={onClick} className={`flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs font-black transition ${active?'bg-white text-river shadow-sm':'text-ink/45 hover:text-ink'}`}><Icon className="h-4 w-4"/>{label}</button> }
+function SidebarTab({ active, onClick, icon: Icon, short, label }: { active: boolean; onClick: () => void; icon: typeof MapPin; short: string; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className={`group flex h-12 min-w-12 items-center justify-center rounded-2xl text-sm font-black transition active:scale-95 lg:w-12 ${
+        active ? 'bg-river text-white shadow-lg shadow-river/25' : 'bg-white/10 text-white/65 hover:bg-white/20 hover:text-white'
+      }`}
+    >
+      <Icon className="hidden h-4 w-4 lg:block" />
+      <span className="lg:hidden">{short}</span>
+      <span className="sr-only">{label}</span>
+    </button>
+  );
+}
+
+function CommandButton({ icon: Icon, label, onClick, disabled = false }: { icon: typeof MapPin; label: string; onClick?: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!onClick || disabled}
+      className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white/92 px-4 py-2 text-sm font-black text-ink shadow-lg backdrop-blur transition hover:-translate-y-0.5 hover:bg-ink hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur">
+      <div className="text-xs font-bold text-ink/45">{label}</div>
+      <div className="mt-1 font-display text-2xl font-black text-ink">{value}</div>
+    </div>
+  );
+}
+
 function SideTitle({eyebrow,title,desc}:{eyebrow:string;title:string;desc:string}) { return <header className="mb-4"><div className="text-[10px] font-black tracking-[.2em] text-tower">{eyebrow}</div><h3 className="mt-1 font-display text-2xl font-black">{title}</h3><p className="mt-1 text-sm text-ink/45">{desc}</p></header> }
 function InfoList({title,icon:Icon,items}:{title:string;icon:typeof MapPin;items:string[]}) { return <div><SideTitle eyebrow="LOCAL GUIDE" title={title} desc="根据路线顺序整理的实用建议。"/><div className="space-y-3">{items.map((item,index)=><div key={item} className="rounded-2xl border border-ink/8 bg-white p-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-river/10 text-river"><Icon className="h-4 w-4"/></span><div><div className="text-xs font-black text-tower">推荐 {String(index+1).padStart(2,'0')}</div><p className="mt-1 text-sm font-semibold leading-6 text-ink/65">{item}</p></div></div></div>)}</div></div> }
+
+function OverviewPanel({ route, plan, selected }: { route: SmartRoute; plan: TravelPlan; selected?: RoutePoint }) {
+  return (
+    <div>
+      <SideTitle eyebrow="AI TRIP BRIEF" title="路线总览" desc="地图、交通、记录点和预算集中在同一张可交互行程卡里。" />
+      <div className="grid grid-cols-2 gap-3">
+        <MiniStat label="点位" value={`${route.points.length} 个`} />
+        <MiniStat label="耗时" value={route.estimatedTime} />
+        <MiniStat label="预算" value={`¥${budgetTotal(plan)}`} />
+        <MiniStat label="导航" value={route.recommendedStartTime} />
+      </div>
+      {selected && (
+        <button className="mt-4 w-full rounded-2xl border border-river/20 bg-river/5 p-4 text-left">
+          <div className="text-xs font-black tracking-[0.16em] text-river">CURRENT STOP</div>
+          <h4 className="mt-2 font-display text-2xl font-black text-ink">{selected.name}</h4>
+          <p className="mt-2 text-sm leading-6 text-ink/58">{selected.reason}</p>
+        </button>
+      )}
+      <div className="mt-4 rounded-2xl bg-ink p-4 text-white">
+        <div className="text-xs font-black tracking-[0.16em] text-jade">沿途 AI 观察</div>
+        <p className="mt-2 text-sm font-semibold leading-6 text-white/78">{route.sceneryAnalysis.highlights.slice(0, 2).join('；')}</p>
+        <p className="mt-3 text-sm leading-6 text-white/58">{route.sceneryAnalysis.socialCopy}</p>
+      </div>
+      <InfoList title="拍照与短视频镜头" icon={Camera} items={route.sceneryAnalysis.videoShots.slice(0, 4)} />
+    </div>
+  );
+}
+
+function StopsPanel({ route, selectedPointId, imageUrl, onSelectPoint }: { route: SmartRoute; selectedPointId?: string; imageUrl: string; onSelectPoint: (point: RoutePoint) => void }) {
+  return (
+    <div>
+      <SideTitle eyebrow="ROUTE STOPS" title="沿路景点与记录点" desc="点击点位后，地图 Marker 和详情同步高亮。" />
+      <div className="space-y-3">{route.points.map((point,index)=><button key={point.id} onClick={()=>onSelectPoint(point)} className={`group w-full overflow-hidden rounded-2xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg ${point.id===selectedPointId?'border-tower ring-2 ring-tower/15':'border-ink/8'}`}><div className="relative h-32 overflow-hidden bg-ink/10"><RealPlaceImage query={`${point.city} ${point.name}`} fallback={point.imageUrl||imageUrl} alt={`${point.name}真实照片`} /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10"/><span className="absolute left-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-tower text-xs font-black text-white">{index+1}</span><div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white"><div><div className="text-xs font-bold text-white/70">{point.time} · 停留 {point.stayMinutes} 分钟</div><div className="font-display text-xl font-black">{point.name}</div></div><ChevronRight className="h-5 w-5"/></div></div><div className="p-3"><p className="line-clamp-2 text-sm leading-6 text-ink/65">{point.reason}</p><div className="mt-2 flex items-start gap-2 text-xs font-bold leading-5 text-river"><Camera className="mt-0.5 h-3.5 w-3.5 shrink-0"/>{point.photoTip}</div></div></button>)}</div>
+    </div>
+  );
+}
+
+function DaysPanel({ plan }: { plan: TravelPlan }) {
+  return <div><SideTitle eyebrow="DAY BY DAY" title="每日行程安排" desc="把时间、地点和停留逻辑放在同一条时间线上。"/>{plan.days.map(day=><div key={day.day} className="mb-5"><div className="sticky top-0 z-10 mb-2 rounded-xl bg-ink px-3 py-2 text-white"><b>{day.day}</b><span className="ml-2 text-xs text-white/60">{day.theme}</span></div>{day.items.map(item=><div key={`${day.day}-${item.time}`} className="relative ml-3 border-l border-river/25 py-3 pl-5 before:absolute before:-left-1.5 before:top-5 before:h-3 before:w-3 before:rounded-full before:bg-river"><div className="text-xs font-black text-tower">{item.time}</div><div className="font-black">{item.place}</div><p className="mt-1 text-sm leading-6 text-ink/55">{item.reason}</p></div>)}</div>)}</div>;
+}
+
+function FoodPanel({ route, plan }: { route: SmartRoute; plan: TravelPlan }) {
+  const foodStops = route.points.filter((point) => point.type === 'food');
+  const foodItems = foodStops.length > 0
+    ? foodStops.map((point) => `${point.name}：${point.time} 到达，建议停留 ${point.stayMinutes} 分钟。${point.reason}`)
+    : plan.food;
+  return <InfoList title="美食店铺推荐" icon={Utensils} items={foodItems} />;
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-ink/8 bg-white p-4">
+      <div className="text-xs font-bold text-ink/42">{label}</div>
+      <div className="mt-1 font-display text-xl font-black text-ink">{value}</div>
+    </div>
+  );
+}
 
 function RealPlaceImage({query,fallback,alt}:{query:string;fallback:string;alt:string}) {
   const [photo,setPhoto]=useState<{url:string;page:string;credit:string}>({url:fallback,page:'',credit:'正在查找实景照片…'});
   useEffect(()=>{let active=true; const url=`https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=900&format=json&origin=*`; fetch(url).then(r=>r.json()).then(data=>{const page=Object.values(data.query?.pages||{})[0] as any; const info=page?.imageinfo?.[0]; if(active&&info?.thumburl) setPhoto({url:info.thumburl,page:`https://commons.wikimedia.org/?curid=${page.pageid}`,credit:'Wikimedia Commons'});}).catch(()=>{}); return()=>{active=false}},[query,fallback]);
   return <><img src={photo.url} alt={alt} onError={(e)=>{e.currentTarget.src=fallback}} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>{photo.page&&<a href={photo.page} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} className="absolute right-2 top-2 z-10 rounded-full bg-black/55 px-2 py-1 text-[9px] font-bold text-white/80">{photo.credit}</a>}</>;
+}
+
+function budgetTotal(plan: TravelPlan) {
+  return plan.budget.reduce((sum, row) => sum + row.amount, 0);
 }
 
 const scheduleByCity: Record<string,{rail:string[];bus:string[]}> = {

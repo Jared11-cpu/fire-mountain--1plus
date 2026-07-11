@@ -20,8 +20,9 @@ npm run preview
 
 - 首页 Landing Page：项目 Logo、Slogan、湖北城市入口、游客/景区/民宿/文旅部门价值展示。
 - AI 旅行规划页：目的地、天数、预算、兴趣、人群和自然语言输入，模拟生成路线、预算、交通、美食、避坑、文案和短视频脚本。
+- 交互式 AI 行程工作台：把页面做成“左侧功能侧栏 + 中间实况地图 + 右侧行程面板”的行程图片卡式体验，但保留可点击交互。
 - 定位 + AI 路线地图：支持浏览器定位、Mock 出发地、模拟高德地图风格路线、Marker 点位详情和路线导航高亮。
-- AI 行程图片卡：把生成结果压缩成一张“左侧行程 + 右侧路线地图”的 SVG 图片，支持打开大图和下载，适合比赛路演、朋友圈和小红书展示。
+- 交通/沿路景点/美食/预算模块：在同一个行程工作台内切换，适合比赛现场展示完整规划能力。
 - 沿途 AI 观察：根据路线生成风景亮点、最佳拍照时间、短视频镜头、社交文案和不同人群记录重点。
 - 景点 AI 讲解页：三峡大坝、黄鹤楼、恩施大峡谷、荆州古城、武当山、东湖，支持通俗版、年轻人版、亲子版、短视频口播、朋友圈文案、拍照建议。
 - 民宿/景区商家后台页：生成周边一日游、欢迎语、入住提醒、周边美食、短视频宣传脚本、小红书种草文案和客服自动回复。
@@ -48,12 +49,23 @@ AI 规划页新增了“定位 + 路线 + 沿途记录点”能力：
 - `src/services/locationService.ts`：封装浏览器 Geolocation 调用、定位失败处理和 Mock 出发地。
 - `src/services/mapService.ts`：封装路线生成入口，后续可替换为高德路径规划结果。
 - `src/data/routeData.ts`：内置武汉、宜昌、恩施、荆州、襄阳、黄石的 Mock 路线、经纬度、拍照建议和沿途观察。
-- `src/components/RouteMap.tsx`：优先加载高德地图 JS API；未配置 Key 或加载失败时自动回退为演示路线点列表。
-- `src/components/ItineraryImageCard.tsx`：根据 `TravelPlan` 和 `SmartRoute` 生成 SVG 行程图片卡，可直接下载。
+- `src/components/MapWorkspace.tsx`：交互式行程工作台，包含左侧侧栏、路线地图、沿路景点、日程、交通、美食和预算。
+- `src/components/RouteMap.tsx`：可接入高德地图 JS API；未启用或加载失败时自动回退为可点击的 SVG/CSS 模拟路线地图。
+- `src/components/ItineraryImageCard.tsx`：保留为后续导出分享图的扩展组件，当前主页面以可交互工作台为主。
 - `src/components/RouteInsightPanel.tsx`：展示沿途风景亮点、拍照时间、短视频镜头和人群化记录建议。
 - `src/types/route.ts`：定义 `RoutePoint`、`SmartRoute`、`UserLocation` 等结构。
 
 当前地图为前端模拟 Demo，不依赖真实后端。用户可以点击“使用当前位置”调用浏览器定位；如果拒绝授权或浏览器不支持定位，系统会回退到武汉站、宜昌东站、恩施站、荆州站、襄阳东站、黄石北站等 Mock 出发地。
+
+如需启用真实高德地图，可在 `.env.local` 中配置：
+
+```bash
+VITE_AMAP_ENABLED=true
+VITE_AMAP_KEY=你的高德 JS API Key
+VITE_AMAP_SECURITY_CODE=你的高德安全密钥
+```
+
+如果没有配置或域名未授权，页面会自动使用演示地图，保证比赛 Demo 可稳定运行。
 
 ## 后续接入真实 AI API 的位置
 
