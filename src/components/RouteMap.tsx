@@ -22,7 +22,8 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
   useEffect(() => {
     let disposed = false;
     async function mount() {
-      if (!amapEnabled || !key || !container.current) { setStatus('fallback'); setMessage('演示地图模式：未启用真实高德地图，当前展示 AI 路线点列表。'); return; }
+      if (!container.current) return;
+      if (!amapEnabled || !key) { setStatus('raster'); setMessage('高德底图已显示，当前用瓦片底图叠加 AI 实时路线。'); return; }
       try {
         if (securityCode) window._AMapSecurityConfig = { securityJsCode: securityCode };
         if (!window.AMap) await new Promise<void>((resolve, reject) => {
@@ -52,7 +53,7 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
           setStatus('raster');
           setMessage('高德底图已显示，JS API 路径规划权限暂不可用。');
         }
-      } catch { setStatus('fallback'); setMessage('真实地图加载失败，已安全回退到演示路线点列表。'); }
+      } catch { setStatus('raster'); setMessage('真实地图加载失败，已切换高德底图瓦片并保留实时路线点。'); }
     }
     mount(); return () => { disposed = true; mapRef.current?.destroy(); mapRef.current = undefined; };
   }, [route.id, amapEnabled, key, securityCode]);
@@ -67,7 +68,7 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, mapOnly = fals
 
   return <section className={`overflow-hidden bg-white ${mapOnly ? 'h-full' : 'rounded-[1.75rem] shadow-soft ring-1 ring-ink/5'}`}>
     {!mapOnly && <div className="flex flex-col gap-4 border-b border-ink/5 p-5 md:flex-row md:items-center md:justify-between"><div><div className="inline-flex items-center gap-2 text-xs font-black tracking-[.16em] text-river"><Navigation className="h-4 w-4"/>LIVE ROUTE</div><h3 className="mt-2 font-display text-2xl font-black">{route.title}</h3><p className="mt-1 text-sm text-ink/50">{message}</p></div><div className="flex gap-2 text-xs font-bold"><span className="rounded-full bg-mist px-3 py-2">{route.totalDistanceKm} km</span><span className="rounded-full bg-mist px-3 py-2">{route.recommendedStartTime} 出发</span></div></div>}
-    <div className={mapOnly ? 'h-full' : 'grid lg:grid-cols-[1.35fr_.65fr]'}><div className={`relative overflow-hidden bg-[#d8f1ee] ${mapOnly ? 'h-full min-h-[620px]' : 'min-h-[430px]'}`}><div ref={container} className={`absolute inset-0 ${fallback || raster ? 'hidden' : ''}`}/>{mapOnly&&<div className="absolute left-5 top-5 z-10 max-w-sm rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur"><div className="text-xs font-black tracking-[.16em] text-river">LIVE ROUTE · {route.totalDistanceKm} KM</div><h3 className="mt-1 font-display text-xl font-black">{route.title}</h3><p className="mt-1 text-xs text-ink/50">{message}</p></div>}{raster&&<GaodeRasterRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}{fallback&&<FallbackRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}</div>
+      <div className={mapOnly ? 'h-full' : 'grid lg:grid-cols-[1.35fr_.65fr]'}><div className={`relative overflow-hidden bg-[#d8f1ee] ${mapOnly ? 'h-full min-h-[620px]' : 'min-h-[430px]'}`}><div ref={container} className={`absolute inset-0 ${fallback || raster ? 'hidden' : ''}`}/>{mapOnly&&<div className="absolute left-5 top-5 z-10 max-w-sm rounded-2xl bg-white/90 p-4 shadow-lg backdrop-blur"><div className="text-xs font-black tracking-[.16em] text-river">LIVE ROUTE · {route.totalDistanceKm} KM</div><h3 className="mt-1 font-display text-xl font-black">{route.title}</h3><p className="mt-1 text-xs text-ink/50">{message}</p></div>}{raster&&<GaodeRasterRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}{fallback&&<FallbackRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}</div>
       {!mapOnly&&<aside className="bg-[#fbfaf5] p-5">{selected&&<><div className="text-xs font-black tracking-[.16em] text-tower">STOP {route.points.findIndex(p=>p.id===selected.id)+1}</div><h4 className="mt-2 font-display text-3xl font-black">{selected.name}</h4><div className="mt-2 flex gap-2 text-xs font-bold text-ink/50"><span>{getPointTypeLabel(selected.type)}</span><span>·</span><span>{selected.time}</span><span>·</span><span>{selected.stayMinutes} 分钟</span></div><p className="mt-5 leading-7 text-ink/68">{selected.reason}</p><div className="mt-4 rounded-xl border-l-4 border-tower bg-white p-4 text-sm leading-6"><b>拍照：</b>{selected.photoTip}</div><div className="mt-3 rounded-xl bg-river/5 p-4 text-sm leading-6"><b>手账：</b>{selected.recordTip}</div></>}</aside>}
     </div>
   </section>;
@@ -153,7 +154,7 @@ function pointColor(type: RoutePoint['type']) {
 
 function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route: SmartRoute; selectedPointId?: string; onSelectPoint: (point: RoutePoint) => void }) {
   const points = route.points;
-  const zoom = 11;
+  const zoom = 12;
   const bounds = getPointBounds(points);
   const center = {
     lng: (bounds.minLng + bounds.maxLng) / 2,
@@ -185,7 +186,7 @@ function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route:
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#dce9e5]">
-      <div className="absolute left-1/2 top-1/2 h-[700px] w-[1000px] -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute left-1/2 top-1/2 h-[760px] w-[1120px] -translate-x-1/2 -translate-y-1/2">
         {tiles.map((tile) => (
           <img
             key={`${tile.x}-${tile.y}`}
@@ -197,8 +198,9 @@ function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route:
           />
         ))}
         <svg viewBox="0 0 1000 700" className="absolute inset-0 h-full w-full">
-          <polyline points={line} fill="none" stroke="#ffffff" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" opacity=".9" />
-          <polyline points={line} fill="none" stroke="#0e6b72" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="18 12" />
+          <polyline points={line} fill="none" stroke="#ffffff" strokeWidth="17" strokeLinecap="round" strokeLinejoin="round" opacity=".95" />
+          <polyline points={line} fill="none" stroke="#0e6b72" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="18 12" />
+          <polyline points={line} fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity=".8" />
         </svg>
         {projected.map(({ point, x, y }, index) => {
           const active = point.id === selectedPointId;
@@ -206,7 +208,7 @@ function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route:
             <button
               key={point.id}
               onClick={() => onSelectPoint(point)}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white px-2.5 py-1.5 text-xs font-black text-white shadow-lg transition active:scale-95 ${active ? 'bg-tower ring-4 ring-tower/25' : 'bg-river'}`}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white px-2.5 py-1.5 text-xs font-black text-white shadow-lg transition hover:-translate-y-[60%] active:scale-95 ${active ? 'bg-tower ring-4 ring-tower/25' : 'bg-river'}`}
               style={{ left: x, top: y }}
             >
               {index + 1}
@@ -223,7 +225,9 @@ function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route:
           </div>
         ))}
       </div>
-      <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1.5 text-xs font-black text-ink/60 shadow-sm">高德地图底图 · AutoNavi</div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/55 to-transparent" />
+      <div className="absolute bottom-3 left-3 rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-ink/60 shadow-sm">高德地图底图 · AutoNavi</div>
+      <div className="absolute bottom-3 right-3 rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-river shadow-sm">实时路线叠加 · 可点击点位</div>
     </div>
   );
 }

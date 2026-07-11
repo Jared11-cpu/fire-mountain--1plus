@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CircleDollarSign, AlertTriangle, Bus, CalendarDays, Camera, CheckCircle2, ChevronRight, Clock3, CloudSun, Copy, ExternalLink, MapPin, Navigation, PencilLine, RefreshCw, Sparkles, TrainFront, Umbrella, Utensils, Wind } from 'lucide-react';
+import { CircleDollarSign, AlertTriangle, Bus, CalendarDays, Camera, Check, CheckCircle2, ChevronRight, Clock3, CloudSun, Copy, ExternalLink, MapPin, Minus, Navigation, PencilLine, Plus, RefreshCw, Sparkles, TrainFront, Umbrella, Utensils, Wind, X } from 'lucide-react';
 import type { TravelPlan } from '../utils/aiGenerator';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { RouteMap } from './RouteMap';
+import { getPointTypeLabel } from '../services/mapService';
 
 type Tab = 'overview' | 'stops' | 'days' | 'records' | 'weather' | 'transport' | 'food' | 'budget';
 
@@ -152,16 +153,121 @@ function OverviewPanel({ route, plan, selected }: { route: SmartRoute; plan: Tra
         <p className="mt-2 text-sm font-semibold leading-6 text-white/78">{route.sceneryAnalysis.highlights.slice(0, 2).join('；')}</p>
         <p className="mt-3 text-sm leading-6 text-white/58">{route.sceneryAnalysis.socialCopy}</p>
       </div>
-      <InfoList title="拍照与短视频镜头" icon={Camera} items={route.sceneryAnalysis.videoShots.slice(0, 4)} />
     </div>
   );
 }
 
+type PointArrangement = {
+  date: string;
+  time: string;
+  stayMinutes: number;
+  included: boolean;
+  note: string;
+};
+
 function StopsPanel({ route, selectedPointId, imageUrl, onSelectPoint }: { route: SmartRoute; selectedPointId?: string; imageUrl: string; onSelectPoint: (point: RoutePoint) => void }) {
+  const [detailPoint, setDetailPoint] = useState<RoutePoint | null>(null);
+  const [arrangements, setArrangements] = useState<Record<string, PointArrangement>>({});
+  const selectedArrangement = detailPoint ? arrangements[detailPoint.id] ?? makeDefaultArrangement(detailPoint) : null;
+
+  const openDetail = (point: RoutePoint) => {
+    onSelectPoint(point);
+    setDetailPoint(point);
+    setArrangements((prev) => prev[point.id] ? prev : { ...prev, [point.id]: makeDefaultArrangement(point) });
+  };
+
+  const updateArrangement = (point: RoutePoint, patch: Partial<PointArrangement>) => {
+    setArrangements((prev) => ({ ...prev, [point.id]: { ...(prev[point.id] ?? makeDefaultArrangement(point)), ...patch } }));
+  };
+
   return (
     <div>
       <SideTitle eyebrow="ROUTE STOPS" title="沿路景点与记录点" desc="点击点位后，地图 Marker 和详情同步高亮。" />
-      <div className="space-y-3">{route.points.map((point,index)=><button key={point.id} onClick={()=>onSelectPoint(point)} className={`group w-full overflow-hidden rounded-2xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg ${point.id===selectedPointId?'border-tower ring-2 ring-tower/15':'border-ink/8'}`}><div className="relative h-32 overflow-hidden bg-ink/10"><RealPlaceImage query={`${point.city} ${point.name}`} fallback={point.imageUrl||imageUrl} alt={`${point.name}真实照片`} /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10"/><span className="absolute left-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-tower text-xs font-black text-white">{index+1}</span><div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white"><div><div className="text-xs font-bold text-white/70">{point.time} · 停留 {point.stayMinutes} 分钟</div><div className="font-display text-xl font-black">{point.name}</div></div><ChevronRight className="h-5 w-5"/></div></div><div className="p-3"><p className="line-clamp-2 text-sm leading-6 text-ink/65">{point.reason}</p><div className="mt-2 flex items-start gap-2 text-xs font-bold leading-5 text-river"><Camera className="mt-0.5 h-3.5 w-3.5 shrink-0"/>{point.photoTip}</div></div></button>)}</div>
+      <div className="space-y-3">{route.points.map((point,index)=>{
+        const arranged = arrangements[point.id]?.included;
+        return <button key={point.id} onClick={()=>openDetail(point)} className={`group w-full overflow-hidden rounded-2xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg ${point.id===selectedPointId?'border-tower ring-2 ring-tower/15':'border-ink/8'}`}><div className="relative h-32 overflow-hidden bg-ink/10"><RealPlaceImage query={`${point.city} ${point.name}`} fallback={point.imageUrl||imageUrl} alt={`${point.name}真实照片`} /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/10"/><span className="absolute left-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-tower text-xs font-black text-white">{index+1}</span>{arranged&&<span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-jade px-2 py-1 text-[10px] font-black text-ink"><Check className="h-3 w-3"/>已安排</span>}<div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white"><div><div className="text-xs font-bold text-white/70">{point.time} · 停留 {point.stayMinutes} 分钟</div><div className="font-display text-xl font-black">{point.name}</div></div><ChevronRight className="h-5 w-5 transition group-hover:translate-x-1"/></div></div><div className="p-3"><p className="line-clamp-2 text-sm leading-6 text-ink/65">{point.reason}</p><div className="mt-2 flex items-start gap-2 text-xs font-bold leading-5 text-river"><Camera className="mt-0.5 h-3.5 w-3.5 shrink-0"/>{point.photoTip}</div><div className="mt-3 inline-flex rounded-full bg-mist px-3 py-1 text-xs font-black text-ink/55">查看详情 / 自行安排</div></div></button>;
+      })}</div>
+
+      {detailPoint && selectedArrangement && (
+        <div className="fixed inset-0 z-50 grid place-items-end bg-ink/35 p-3 backdrop-blur-sm md:place-items-center md:p-6" onClick={() => setDetailPoint(null)}>
+          <section className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-[1.5rem] bg-[#fffdf7] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="relative h-48 overflow-hidden bg-ink/10">
+              <RealPlaceImage query={`${detailPoint.city} ${detailPoint.name}`} fallback={detailPoint.imageUrl||imageUrl} alt={`${detailPoint.name}实景详情`} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/10" />
+              <button onClick={() => setDetailPoint(null)} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow-lg transition hover:bg-ink hover:text-white active:scale-95" aria-label="关闭详情">
+                <X className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-5 left-5 right-5 text-white">
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-jade">{getPointTypeLabel(detailPoint.type)} · {detailPoint.city}</div>
+                <h3 className="mt-1 font-display text-3xl font-black">{detailPoint.name}</h3>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-white/80">
+                  <span className="rounded-full bg-white/18 px-3 py-1">{detailPoint.time}</span>
+                  <span className="rounded-full bg-white/18 px-3 py-1">建议 {detailPoint.stayMinutes} 分钟</span>
+                  <span className="rounded-full bg-white/18 px-3 py-1">{detailPoint.openingHours ?? '开放时间以景区公告为准'}</span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <div className="grid gap-3 md:grid-cols-2">
+                <DetailInfo title="推荐理由" text={detailPoint.reason} />
+                <DetailInfo title="记录建议" text={detailPoint.recordTip} />
+                <DetailInfo title="拍照建议" text={detailPoint.photoTip} />
+                <DetailInfo title="预算参考" text={`约 ¥${detailPoint.estimatedCost ?? (detailPoint.type === 'food' ? 50 : 0)}，实际以现场价格为准。`} />
+              </div>
+
+              <div className="rounded-2xl border border-river/15 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-black tracking-[0.16em] text-river">MY PLAN</div>
+                    <h4 className="font-display text-xl font-black">我的自定义安排</h4>
+                  </div>
+                  <button
+                    onClick={() => updateArrangement(detailPoint, { included: !selectedArrangement.included })}
+                    className={`rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${selectedArrangement.included ? 'bg-jade text-ink' : 'bg-ink text-white'}`}
+                  >
+                    {selectedArrangement.included ? '已加入' : '加入行程'}
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-black text-ink/45">日期</span>
+                    <input type="date" value={selectedArrangement.date} onChange={(event) => updateArrangement(detailPoint, { date: event.target.value })} className="focus-ring w-full rounded-xl border border-ink/8 bg-mist px-3 py-3 text-sm font-bold" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-black text-ink/45">到达时间</span>
+                    <input type="time" value={selectedArrangement.time} onChange={(event) => updateArrangement(detailPoint, { time: event.target.value })} className="focus-ring w-full rounded-xl border border-ink/8 bg-mist px-3 py-3 text-sm font-bold" />
+                  </label>
+                </div>
+                <div className="mt-3 rounded-xl bg-mist p-3">
+                  <div className="mb-2 text-xs font-black text-ink/45">停留时长</div>
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => updateArrangement(detailPoint, { stayMinutes: Math.max(15, selectedArrangement.stayMinutes - 15) })} className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink shadow-sm active:scale-95" aria-label="减少停留时间"><Minus className="h-4 w-4" /></button>
+                    <div className="font-display text-3xl font-black">{selectedArrangement.stayMinutes}<span className="ml-1 text-sm font-bold text-ink/45">分钟</span></div>
+                    <button onClick={() => updateArrangement(detailPoint, { stayMinutes: Math.min(240, selectedArrangement.stayMinutes + 15) })} className="grid h-10 w-10 place-items-center rounded-full bg-white text-ink shadow-sm active:scale-95" aria-label="增加停留时间"><Plus className="h-4 w-4" /></button>
+                  </div>
+                </div>
+                <label className="mt-3 block">
+                  <span className="mb-1 block text-xs font-black text-ink/45">个人备注</span>
+                  <textarea value={selectedArrangement.note} onChange={(event) => updateArrangement(detailPoint, { note: event.target.value })} placeholder="例如：想拍大坝全景、预留讲解时间、给朋友买伴手礼..." className="focus-ring min-h-24 w-full resize-none rounded-xl border border-ink/8 bg-mist px-3 py-3 text-sm leading-6" />
+                </label>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function makeDefaultArrangement(point: RoutePoint): PointArrangement {
+  return { date: toInputDate(new Date()), time: point.time, stayMinutes: point.stayMinutes, included: true, note: '' };
+}
+
+function DetailInfo({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-4 ring-1 ring-ink/6">
+      <div className="text-xs font-black tracking-[0.12em] text-tower">{title}</div>
+      <p className="mt-2 text-sm font-semibold leading-6 text-ink/62">{text}</p>
     </div>
   );
 }

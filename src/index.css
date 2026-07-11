@@ -55,6 +55,18 @@ body {
   box-shadow: 0 16px 45px rgba(18, 34, 42, .08);
 }
 
+.journal-handwriting {
+  font-family: "STKaiti", "KaiTi", "华文楷体", "Comic Sans MS", cursive;
+  letter-spacing: .02em;
+}
+
+.journal-map {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(47, 185, 142, .22), transparent 28%),
+    radial-gradient(circle at 84% 20%, rgba(231, 91, 61, .16), transparent 30%),
+    linear-gradient(135deg, #fffdf7 0%, #effaf4 56%, #f8f1df 100%);
+}
+
 .amap-route-label {
   display: grid;
   width: 28px;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Camera, MapPin, Plus, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
+import { Camera, MapPin, Plus, Route, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import type { JournalEntry } from '../types/route';
 import { clearJournal, deletePhoto, loadPhoto, readEntries, savePhoto, writeEntries } from '../services/journalStorage';
 
@@ -59,11 +59,83 @@ export function JournalPage({ onPlan, initialFocus = null }: { onPlan: () => voi
       </div>
       <div>
         <FootprintDetailPanel focus={focus} entries={entries} photos={photos} onFocus={setFocus} />
-        {entries.length === 0 ? <div className="paper-card mt-5 grid min-h-96 place-items-center rounded-[1.5rem] p-10 text-center"><div><BookOpen className="mx-auto h-12 w-12 text-river"/><h2 className="mt-4 font-display text-3xl font-black">第一张照片，等你上路</h2><p className="mt-2 text-ink/55">上传旅途中拍摄的照片，自动形成时间线。</p></div></div> : <div className="mt-5 space-y-5">{entries.map((entry, index)=><article key={entry.id} className="paper-card rounded-[1.5rem] p-5 md:p-7"><div className="flex items-start justify-between"><div><div className="text-xs font-black tracking-[.18em] text-tower">STOP {String(entries.length-index).padStart(2,'0')}</div><h2 className="mt-1 font-display text-3xl font-black">{entry.pointName}</h2><div className="mt-2 flex items-center gap-2 text-sm text-ink/50"><MapPin className="h-4 w-4"/>{entry.city} · {new Date(entry.visitedAt).toLocaleString('zh-CN')}</div></div><button aria-label="删除记录" onClick={()=>removeEntry(entry)} className="rounded-full p-2 text-ink/35 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-5 w-5"/></button></div>{entry.photoIds.length>0&&<div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-3">{entry.photoIds.map((id)=><div key={id} className="aspect-[4/3] overflow-hidden rounded-xl bg-ink/5">{photos[id]&&<img src={photos[id]} alt={`${entry.pointName}旅行照片`} className="h-full w-full object-cover"/>}</div>)}</div>}<p className="mt-5 whitespace-pre-wrap leading-7 text-ink/70">{entry.note||'这一站没有文字，照片已经记住了当时的光。'}</p></article>)}</div>}
+        <JournalRouteMap entries={entries} photos={photos} />
+        {entries.length > 0 && <div className="mt-5 space-y-5">{entries.map((entry, index)=><article key={entry.id} className="paper-card rounded-[1.5rem] p-5 md:p-7"><div className="flex items-start justify-between"><div><div className="text-xs font-black tracking-[.18em] text-tower">STOP {String(entries.length-index).padStart(2,'0')}</div><h2 className="mt-1 font-display text-3xl font-black">{entry.pointName}</h2><div className="mt-2 flex items-center gap-2 text-sm text-ink/50"><MapPin className="h-4 w-4"/>{entry.city} · {new Date(entry.visitedAt).toLocaleString('zh-CN')}</div></div><button aria-label="删除记录" onClick={()=>removeEntry(entry)} className="rounded-full p-2 text-ink/35 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-5 w-5"/></button></div>{entry.photoIds.length>0&&<div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-3">{entry.photoIds.map((id)=><div key={id} className="aspect-[4/3] overflow-hidden rounded-xl bg-ink/5">{photos[id]&&<img src={photos[id]} alt={`${entry.pointName}旅行照片`} className="h-full w-full object-cover"/>}</div>)}</div>}<p className="journal-handwriting mt-5 whitespace-pre-wrap rounded-2xl bg-[#fff8d8] px-4 py-3 text-lg leading-8 text-ink/76">{entry.note||'这一站没有文字，照片已经记住了当时的光。'}</p></article>)}</div>}
       {entries.length>0&&<button onClick={async()=>{await clearJournal(entries);setEntries([])}} className="mt-6 text-sm font-bold text-red-600">清空整本手账</button>}</div>
     </section>
   </div></main>;
 }
+
+function JournalRouteMap({ entries, photos }: { entries: JournalEntry[]; photos: Record<string, string> }) {
+  const chronological = [...entries].reverse();
+  const points = chronological.length > 0 ? chronological : demoJournalStops;
+  const positions = points.map((_, index) => {
+    const t = points.length <= 1 ? 0.5 : index / (points.length - 1);
+    return {
+      x: 11 + t * 78,
+      y: 68 - Math.sin(t * Math.PI) * 38 + (index % 2 === 0 ? 4 : -6),
+    };
+  });
+  const line = positions.map((pos) => `${pos.x},${pos.y}`).join(' ');
+
+  return (
+    <section className="journal-map mt-5 overflow-hidden rounded-[1.7rem] border border-ink/8 p-5 shadow-soft">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-black tracking-[.2em] text-river"><Route className="h-4 w-4"/>MY ROUTE MAP</div>
+          <h2 className="journal-handwriting mt-2 text-4xl font-black text-ink">我的旅行路线手账</h2>
+        </div>
+        <p className="max-w-sm text-sm leading-6 text-ink/52">每个点位都保留照片和当时的感想，路线会随着你上传记录自动生长。</p>
+      </div>
+
+      <div className="relative mt-5 min-h-[420px] overflow-hidden rounded-[1.4rem] bg-[#edf8f2]">
+        <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(#0e6b7214_1px,transparent_1px),linear-gradient(90deg,#0e6b7214_1px,transparent_1px)] [background-size:38px_38px]" />
+        <div className="absolute -left-10 top-20 h-36 w-[120%] -rotate-6 rounded-full bg-[#79d7e8]/45 blur-[1px]" />
+        <div className="absolute bottom-0 right-0 h-44 w-2/3 rounded-tl-[50%] bg-[#b8ead1]/70" />
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+          <polyline points={line} fill="none" stroke="#fff" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={line} fill="none" stroke="#e75b3d" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 3" />
+        </svg>
+
+        {points.map((entry, index) => {
+          const pos = positions[index];
+          const photoId = entry.photoIds?.[0];
+          const photo = photoId ? photos[photoId] : '';
+          return (
+            <div key={entry.id} className="absolute w-44 -translate-x-1/2 -translate-y-1/2" style={{ left: `${pos.x}%`, top: `${pos.y}%` }}>
+              <div className="relative">
+                <span className="absolute -left-3 -top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-ink text-sm font-black text-white shadow-lg">{index + 1}</span>
+                <div className="rotate-[-2deg] rounded-[1.1rem] bg-white p-2 shadow-xl ring-1 ring-ink/8 transition hover:rotate-0 hover:scale-[1.02]">
+                  <div className="aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-jade/20 to-river/20">
+                    {photo ? <img src={photo} alt={`${entry.pointName}照片`} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-center text-xs font-black text-river/75">上传<br/>照片</div>}
+                  </div>
+                  <div className="mt-2">
+                    <div className="truncate text-xs font-black text-tower">{entry.city}</div>
+                    <div className="journal-handwriting truncate text-xl font-black text-ink">{entry.pointName}</div>
+                    <p className="journal-handwriting mt-1 line-clamp-2 text-sm leading-5 text-ink/62">{entry.note || '这里等你写下自己的感想。'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {entries.length === 0 && (
+          <div className="absolute inset-x-5 bottom-5 rounded-2xl bg-white/90 p-4 text-center shadow-lg backdrop-blur">
+            <div className="journal-handwriting text-2xl font-black text-ink">第一张照片，等你上路</div>
+            <p className="mt-1 text-sm text-ink/55">上传旅途中拍摄的照片和感想后，这里会自动变成你的路线地图。</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+const demoJournalStops: JournalEntry[] = [
+  { id: 'demo-1', pointId: 'demo-1', pointName: '出发地', city: '武汉', day: 1, note: '从这里开始写下今天的风。', visitedAt: new Date().toISOString(), photoIds: [] },
+  { id: 'demo-2', pointId: 'demo-2', pointName: '沿途风景', city: '宜昌', day: 1, note: '把窗外的山水收进口袋。', visitedAt: new Date().toISOString(), photoIds: [] },
+  { id: 'demo-3', pointId: 'demo-3', pointName: '夜景收尾', city: '宜昌', day: 1, note: '灯亮起来，路线也有了结尾。', visitedAt: new Date().toISOString(), photoIds: [] },
+];
 
 function FootprintDetailPanel({ focus, entries, photos, onFocus }: { focus: FootprintDetail | null; entries: JournalEntry[]; photos: Record<string, string>; onFocus: (focus: FootprintDetail | null) => void }) {
   const places = [...new Set(entries.map((entry) => entry.pointName))];
