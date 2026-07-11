@@ -14,6 +14,25 @@ export type RoutePoint = {
   reason: string;
   photoTip: string;
   recordTip: string;
+  day?: number;
+  openingHours?: string;
+  estimatedCost?: number;
+  transportMode?: 'walk' | 'drive' | 'transit';
+  imageUrl?: string;
+  imageCredit?: { author: string; license: string; sourceUrl: string };
+};
+
+export type JournalEntry = {
+  id: string;
+  pointId: string;
+  pointName: string;
+  city: CityName;
+  day: number;
+  note: string;
+  visitedAt: string;
+  lat?: number;
+  lng?: number;
+  photoIds: string[];
 };
 
 export type SceneryAnalysis = {

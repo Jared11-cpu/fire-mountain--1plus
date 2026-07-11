@@ -4,22 +4,25 @@ import { budgetOptions, cities, dayOptions, examples, groupOptions, interestOpti
 import { generateTravelPlan, type PlannerInput, type TravelPlan } from '../utils/aiGenerator';
 import { RouteMap } from './RouteMap';
 import { RouteInsightPanel } from './RouteInsightPanel';
+import { MapWorkspace } from './MapWorkspace';
 import { generateSmartRoute } from '../services/mapService';
 import { getBrowserLocation, makeMockLocation, mockLocationOptions } from '../services/locationService';
 import type { RoutePoint, SmartRoute, UserLocation } from '../types/route';
+import { BrandMark } from './Logo';
 
 type PlannerPageProps = {
   initialCity: CityName;
+  initialPrompt?: string;
 };
 
-export function PlannerPage({ initialCity }: PlannerPageProps) {
+export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProps) {
   const [form, setForm] = useState<PlannerInput>({
     city: initialCity,
     days: 2,
     budget: 600,
     interests: ['拍照', '美食'],
     group: '朋友',
-    prompt: '我想去宜昌两天一夜，预算 600，喜欢拍照和美食。',
+    prompt: initialPrompt || '我想去宜昌两天一夜，预算 600，喜欢拍照和美食。',
   });
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -196,9 +199,7 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
         <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
           <section className="glass rounded-[1.75rem] p-5 shadow-soft">
             <div className="mb-5 flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-river/10 text-river">
-                <Sparkles className="h-5 w-5" />
-              </div>
+              <BrandMark compact />
               <div>
                 <h2 className="font-display text-2xl font-black text-ink">需求输入</h2>
                 <p className="text-sm text-ink/55">选择条件或直接说人话</p>
@@ -376,84 +377,8 @@ export function PlannerPage({ initialCity }: PlannerPageProps) {
               <ActionButton icon={Navigation} label={navigating ? '导航模拟中' : '模拟导航'} onClick={simulateNavigation} disabled={navigating} />
             </div>
 
-            <RouteMap
-              route={smartRoute}
-              selectedPointId={selectedPointId}
-              activePointIndex={activePointIndex}
-              navigating={navigating}
-              onSelectPoint={selectRoutePoint}
-            />
+            <MapWorkspace route={smartRoute} plan={plan} selectedPointId={selectedPointId} activePointIndex={activePointIndex} navigating={navigating} imageUrl={selectedCity.imageUrl} onSelectPoint={selectRoutePoint} />
 
-            {showInsights && <RouteInsightPanel route={smartRoute} />}
-
-            <div className="grid gap-5 lg:grid-cols-2">
-              {plan.days.map((day) => (
-                <div key={day.day} className="glass rounded-[1.5rem] p-5 shadow-sm">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-2xl bg-river text-white">
-                      <Route className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-display text-2xl font-black text-ink">{day.day}</h3>
-                      <p className="text-sm font-bold text-river">{day.theme}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {day.items.map((item) => (
-                      <div key={`${day.day}-${item.time}`} className="rounded-2xl bg-white/70 p-4">
-                        <div className="flex items-center gap-3">
-                          <span className="rounded-full bg-ink px-3 py-1 text-xs font-black text-white">{item.time}</span>
-                          <span className="font-black text-ink">{item.place}</span>
-                        </div>
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink/62">{item.reason}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-2">
-              <InfoPanel icon={MapPin} title="交通建议" items={plan.transport} />
-              <InfoPanel icon={Utensils} title="美食推荐" items={plan.food} />
-              <InfoPanel icon={Camera} title="拍照打卡点" items={plan.photoSpots} />
-              <InfoPanel icon={MessageSquareText} title="避坑提醒" items={plan.warnings} />
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-              <div className="glass rounded-[1.5rem] p-5 shadow-sm">
-                <div className="mb-4 flex items-center gap-3">
-                  <Calculator className="h-6 w-6 text-river" />
-                  <h3 className="font-display text-2xl font-black text-ink">预算明细表</h3>
-                </div>
-                <div className="overflow-hidden rounded-2xl border border-white/70">
-                  {plan.budget.map((row) => (
-                    <div key={row.item} className="grid grid-cols-[90px_90px_1fr] border-b border-white/70 bg-white/65 p-3 text-sm last:border-b-0">
-                      <span className="font-black text-ink">{row.item}</span>
-                      <span className="font-black text-tower">{row.amount} 元</span>
-                      <span className="text-ink/60">{row.note}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="glass rounded-[1.5rem] p-5 shadow-sm">
-                <div className="mb-4 flex items-center gap-3">
-                  <Film className="h-6 w-6 text-tower" />
-                  <h3 className="font-display text-2xl font-black text-ink">传播内容</h3>
-                </div>
-                <div className="rounded-2xl bg-white/70 p-4">
-                  <div className="mb-2 text-sm font-black text-river">朋友圈 / 小红书文案</div>
-                  <p className="leading-7 text-ink/70">{plan.socialCopy}</p>
-                </div>
-                <div className="mt-3 space-y-2">
-                  {plan.videoScript.map((line) => (
-                    <div key={line} className="rounded-2xl bg-ink/5 px-4 py-3 text-sm font-semibold leading-6 text-ink/70">
-                      {line}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </section>
         </div>
       </div>

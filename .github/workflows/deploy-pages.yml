@@ -26,11 +26,14 @@ jobs:
         with:
           node-version: 20
 
+      - name: Enable pnpm
+        run: corepack enable
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build:static -- --base=/250/
+        run: pnpm exec tsc -b && pnpm exec vite build --base=/fire-moutain-cup-1/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

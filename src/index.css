@@ -29,6 +29,58 @@ body {
     linear-gradient(135deg, #f7fbf9 0%, #edf6f2 50%, #f7f4ec 100%);
 }
 
+.journal-cover {
+  background: linear-gradient(120deg, rgba(12, 49, 48, .96), rgba(14, 107, 114, .82)),
+    radial-gradient(circle at 85% 15%, rgba(231, 91, 61, .5), transparent 30%);
+  box-shadow: 0 30px 80px rgba(18, 34, 42, .2);
+}
+
+.brand-mark {
+  box-shadow: 0 10px 26px rgba(14, 107, 114, .2), inset 0 0 0 1px rgba(255,255,255,.12);
+  transform: rotate(-2deg);
+}
+
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 27%;
+}
+
+
+.paper-card {
+  border: 1px solid rgba(18, 34, 42, .08);
+  background: #fffdf7;
+  box-shadow: 0 16px 45px rgba(18, 34, 42, .08);
+}
+
+.amap-route-label {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 999px;
+  background: #d35236;
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(18, 34, 42, .25);
+}
+
+.map-workspace { width: calc(100vw - 3rem); margin-left: calc((min(100vw - 3rem, 1280px) - 100%) / -2); }
+.sidebar-scroll { scrollbar-width: thin; scrollbar-color: rgba(14,107,114,.35) transparent; }
+
+@media (max-width: 1023px) {
+  .map-workspace { width: 100%; margin-left: 0; }
+  .map-workspace aside { border-left: 0; border-top: 1px solid rgba(18,34,42,.1); }
+}
+
+@media (max-width: 640px) {
+  .section-pad { padding-left: 1rem; padding-right: 1rem; }
+  body { overflow-x: hidden; }
+}
+
 button,
 input,
 textarea,

@@ -24,6 +24,7 @@ export type City = {
   image: string;
   imageUrl: string;
   gradient: string;
+  imageCredit: { author: string; license: string; sourceUrl: string };
 };
 
 export type Attraction = {
@@ -45,11 +46,9 @@ export type Attraction = {
 
 export const navItems = [
   { id: 'home', label: '首页' },
-  { id: 'planner', label: 'AI 规划' },
-  { id: 'guide', label: 'AI 讲解' },
-  { id: 'business', label: '商家后台' },
-  { id: 'dashboard', label: '数据看板' },
-  { id: 'pitch', label: '路演页' },
+  { id: 'planner', label: 'AI 行程' },
+  { id: 'journal', label: '旅行手账' },
+  { id: 'pitch', label: '项目介绍' },
 ] as const;
 
 export const cities: City[] = [
@@ -58,7 +57,8 @@ export const cities: City[] = [
     title: '三峡山水与长江夜游',
     tags: ['三峡大坝', '清江画廊', '江景美食'],
     image: '三峡水脉',
-    imageUrl: `${sceneryBase}yichang.svg`,
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Three%20Gorges%20Dam.jpg?width=1280',
+    imageCredit: { author: 'Dan Kamminga', license: 'CC BY-SA 2.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Three_Gorges_Dam.jpg' },
     gradient: 'from-river via-jade to-[#85C77A]',
   },
   {
@@ -66,7 +66,8 @@ export const cities: City[] = [
     title: '黄鹤楼、东湖与城市咖啡',
     tags: ['Citywalk', '历史文化', '江汉路'],
     image: '江城夜色',
-    imageUrl: `${sceneryBase}wuhan.svg`,
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Yellow%20Crane%20Tower,%202013%20photo.jpg?width=1280',
+    imageCredit: { author: 'Wikimedia Commons contributor', license: 'Commons license', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Yellow_Crane_Tower,_2013_photo.jpg' },
     gradient: 'from-[#243B53] via-river to-tower',
   },
   {
@@ -74,7 +75,8 @@ export const cities: City[] = [
     title: '峡谷、溶洞与短视频大片',
     tags: ['自然风光', '土家文化', '云海'],
     image: '峡谷云阶',
-    imageUrl: `${sceneryBase}enshi.svg`,
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Enshi%20grand%20canyon%202025%2010.jpg?width=1280',
+    imageCredit: { author: 'Wimwamble', license: 'CC BY-SA 4.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Enshi_grand_canyon_2025_10.jpg' },
     gradient: 'from-[#1F513F] via-jade to-[#8DBB66]',
   },
   {
@@ -82,7 +84,8 @@ export const cities: City[] = [
     title: '古城墙与楚文化沉浸',
     tags: ['古城', '博物馆', '历史旅拍'],
     image: '楚风古城',
-    imageUrl: `${sceneryBase}jingzhou.svg`,
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Jingzhou%20dongmen.jpg?width=1280',
+    imageCredit: { author: 'Popolon', license: 'CC BY-SA 3.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Jingzhou_dongmen.jpg' },
     gradient: 'from-[#693E2E] via-tower to-[#D8A64D]',
   },
   {
@@ -90,7 +93,8 @@ export const cities: City[] = [
     title: '古城江湖与唐城夜游',
     tags: ['古风', '影视城', '汉江'],
     image: '汉江城廓',
-    imageUrl: `${sceneryBase}xiangyang.svg`,
+    imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/China%20Hubei%20Xiangyang%20Tang%20Dynasty%20City%20Film%20and%20TV%20Base5.jpg?width=1280',
+    imageCredit: { author: 'Sherbet', license: 'CC BY 2.5', sourceUrl: 'https://commons.wikimedia.org/wiki/File:China_Hubei_Xiangyang_Tang_Dynasty_City_Film_and_TV_Base5.jpg' },
     gradient: 'from-[#31425B] via-[#6F7757] to-[#D6AF62]',
   },
   {
@@ -98,7 +102,8 @@ export const cities: City[] = [
     title: '矿冶工业遗产与湖山周末',
     tags: ['矿山公园', '仙岛湖', '工业风'],
     image: '矿冶湖光',
-    imageUrl: `${sceneryBase}huangshi.svg`,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/%E9%BB%84%E7%9F%B3%E6%B9%96%E4%B8%8E%E5%B1%B1.jpg/1280px-%E9%BB%84%E7%9F%B3%E6%B9%96%E4%B8%8E%E5%B1%B1.jpg',
+    imageCredit: { author: 'Cangminzho', license: 'CC BY-SA 4.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:黄石湖与山.jpg' },
     gradient: 'from-[#293241] via-[#587D71] to-[#D8A64D]',
   },
 ];

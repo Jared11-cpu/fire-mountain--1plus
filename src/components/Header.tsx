@@ -29,12 +29,7 @@ export function Header({ page, nav, onNavigate }: HeaderProps) {
             </button>
           ))}
         </nav>
-        <button
-          onClick={() => onNavigate('planner')}
-          className="rounded-full bg-tower px-5 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#ba432b] active:scale-95"
-        >
-          开始 AI 规划
-        </button>
+        <div className="hidden w-[210px] lg:block" aria-hidden="true" />
       </div>
       <div className="flex gap-2 overflow-x-auto px-4 pb-3 lg:hidden">
         {nav.map((item) => (
