@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, MapPin, Send, Wand2 } from 'lucide-react';
+import { ArrowRight, Send } from 'lucide-react';
 import { cities, type CityName } from '../data/mockData';
 import { readEntries } from '../services/journalStorage';
 
@@ -25,18 +25,19 @@ export function LandingPage({ onStart, onCitySelect, onFootprintDetail }: Landin
       <section className="section-pad river-line relative overflow-hidden py-14 md:py-20">
         <div className="absolute inset-0 -z-10 bg-river-grid map-ridge opacity-80" />
         <div className="mx-auto max-w-5xl text-center">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-river/20 bg-white/75 px-4 py-2 text-sm font-bold text-river shadow-sm">
-              <Wand2 className="h-4 w-4" />
-              湖北本地文化旅行智能体 · 火山杯青年赛道
-            </div>
             <h1 className="font-display text-5xl font-black leading-[1.08] text-ink sm:text-6xl lg:text-7xl">
               一句话，走懂湖北
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg font-medium leading-8 text-ink/60">AI 把路线、地图、预算与真实旅行记录整理成一份可以直接出发的行程。</p>
-            <form onSubmit={(event) => { event.preventDefault(); submitPrompt(); }} className="mx-auto mt-7 flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-ink/10 bg-white/90 p-3 text-left shadow-soft transition focus-within:border-river/40 focus-within:ring-4 focus-within:ring-river/10">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-river/10 text-river"><MapPin className="h-5 w-5" /></span>
-              <label className="min-w-0 flex-1"><span className="block text-xs font-black tracking-[.15em] text-river">和楚游 AI 说说你的旅行</span><input value={prompt} onChange={(event)=>setPrompt(event.target.value)} className="mt-1 w-full bg-transparent font-semibold text-ink outline-none placeholder:text-ink/35" placeholder="例如：恩施三天两夜，预算 1000，喜欢峡谷和拍照" /></label>
-              <button type="submit" aria-label="发送旅行需求" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-tower text-white transition hover:scale-105"><Send className="h-4 w-4" /></button>
+            <form onSubmit={(event) => { event.preventDefault(); submitPrompt(); }} className="mx-auto mt-7 flex w-full max-w-2xl items-center gap-2 rounded-full border border-ink/10 bg-white/92 px-5 py-3 text-left shadow-soft transition focus-within:border-river/40 focus-within:ring-4 focus-within:ring-river/10">
+              <input
+                aria-label="旅行需求"
+                value={prompt}
+                onChange={(event)=>setPrompt(event.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-base font-semibold text-ink outline-none placeholder:text-ink/35"
+                placeholder="例如：恩施三天两夜，预算 1000，喜欢峡谷和拍照"
+              />
+              <button type="submit" aria-label="发送旅行需求" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-tower text-white transition hover:scale-105 active:scale-95"><Send className="h-4 w-4" /></button>
             </form>
             <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
               <button
