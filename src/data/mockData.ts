@@ -132,7 +132,7 @@ export const valueCards = [
   },
 ];
 
-export const interestOptions = ['美食', '拍照', '历史文化', '自然风光', '亲子', '情侣', 'Citywalk', '特种兵旅行'];
+export const interestOptions = ['美食', '拍照', '历史文化', '自然风光', 'Citywalk', '特种兵旅行'];
 export const groupOptions = ['学生', '情侣', '家庭', '朋友', '老人'];
 export const dayOptions = [1, 2, 3];
 export const budgetOptions = [300, 600, 1000, 1500];
