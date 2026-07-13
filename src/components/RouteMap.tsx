@@ -2,14 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Camera, Clock3, MapPin, Navigation, RefreshCw, Route as RouteIcon, Utensils } from 'lucide-react';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { getPointTypeLabel } from '../services/mapService';
-import { classifyDrivingFailure, planAmapDrivingRoute, type DrivingSearchFailure, type RoadPlanMetrics, type RoadPlanStatus } from '../services/amapDriving';
+import { classifyDrivingFailure, loadAmapJsApi, planAmapDrivingRoute, type DrivingSearchFailure, type RoadPlanMetrics, type RoadPlanStatus } from '../services/amapDriving';
 
 declare global { interface Window { AMap?: any; _AMapSecurityConfig?: { securityJsCode: string } } }
 
 type Props = { route: SmartRoute; selectedPointId?: string; activePointIndex: number; navigating: boolean; onSelectPoint: (point: RoutePoint) => void; onRoadPlanChange?: (metrics: RoadPlanMetrics) => void; mapOnly?: boolean };
 const icons: Record<RoutePoint['type'], typeof MapPin> = { start: Navigation, scenic: MapPin, food: Utensils, photo: Camera, rest: Clock3, hotel: MapPin, end: RouteIcon };
-
-let amapLoaderPromise: Promise<any> | undefined;
 
 export function RouteMap({ route, selectedPointId, onSelectPoint, onRoadPlanChange, mapOnly = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -61,7 +59,7 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, onRoadPlanChan
         return;
       }
       try {
-        const AMap = await loadAmap(key, securityCode);
+        const AMap = await loadAmapJsApi(key, securityCode);
         if (!isCurrent() || !container.current) return;
         await loadAmapPlugin(AMap, 'AMap.Driving');
         if (!isCurrent() || !container.current) return;
@@ -130,31 +128,6 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, onRoadPlanChan
       {!mapOnly&&<aside className="bg-[#fbfaf5] p-5">{selected&&<><div className="text-xs font-black tracking-[.16em] text-tower">STOP {route.points.findIndex(p=>p.id===selected.id)+1}</div><h4 className="mt-2 font-display text-3xl font-black">{selected.name}</h4><div className="mt-2 flex gap-2 text-xs font-bold text-ink/50"><span>{getPointTypeLabel(selected.type)}</span><span>·</span><span>{selected.time}</span><span>·</span><span>{selected.stayMinutes} 分钟</span></div><p className="mt-5 leading-7 text-ink/68">{selected.reason}</p><div className="mt-4 rounded-xl border-l-4 border-tower bg-white p-4 text-sm leading-6"><b>拍照：</b>{selected.photoTip}</div><div className="mt-3 rounded-xl bg-river/5 p-4 text-sm leading-6"><b>手账：</b>{selected.recordTip}</div></>}</aside>}
     </div>
   </section>;
-}
-
-function loadAmap(key: string, securityCode?: string) {
-  if (securityCode) window._AMapSecurityConfig = { securityJsCode: securityCode };
-  if (window.AMap) return Promise.resolve(window.AMap);
-  if (amapLoaderPromise) return amapLoaderPromise;
-  amapLoaderPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>('script[data-amap-js-api="2"]');
-    const finish = () => window.AMap ? resolve(window.AMap) : reject(new Error('AMap script loaded without window.AMap'));
-    if (existing) {
-      existing.addEventListener('load', finish, { once: true });
-      existing.addEventListener('error', () => reject(new Error('AMap script network load failed')), { once: true });
-      return;
-    }
-    const script = document.createElement('script');
-    script.dataset.amapJsApi = '2';
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}&plugin=AMap.Driving`;
-    script.onload = finish;
-    script.onerror = () => reject(new Error('AMap script network load failed'));
-    document.head.appendChild(script);
-  }).catch((error) => {
-    amapLoaderPromise = undefined;
-    throw error;
-  });
-  return amapLoaderPromise;
 }
 
 function normalizeFailure(caught: unknown): DrivingSearchFailure {

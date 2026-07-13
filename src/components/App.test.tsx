@@ -14,8 +14,8 @@ describe('routes and accessibility', () => {
     expect(screen.getByLabelText('开始日期')).toBeInTheDocument();
     planner.unmount();
     const journal = renderRoute('/journal');
-    expect(screen.getByRole('heading', { name: '示例路线 ≠ 真实足迹' })).toBeInTheDocument();
-    expect(screen.getByText('0 条真实记录')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '把一路山水，写成自己的湖北故事' })).toBeInTheDocument();
+    expect(screen.getByText('还没有真实记录，先在右侧写下第一站。')).toBeInTheDocument();
     journal.unmount();
     renderRoute('/about');
     expect(screen.getByRole('heading', { name: '系统架构图' })).toBeInTheDocument();

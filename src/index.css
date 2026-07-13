@@ -144,8 +144,8 @@ body {
   position: absolute;
   top: -16px;
   display: flex;
-  width: 138px;
-  min-height: 66px;
+  width: 184px;
+  min-height: 78px;
   overflow: hidden;
   border: 1px solid rgba(18,34,42,.1);
   border-radius: 12px;
@@ -160,9 +160,9 @@ body {
 .journal-map-pin-right .journal-map-note { left: 42px; }
 .journal-map-pin-left .journal-map-note { right: 42px; }
 .journal-map-pin:hover .journal-map-note { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(18,34,42,.22); }
-.journal-map-note img { width: 48px; min-height: 66px; object-fit: cover; }
+.journal-map-note img { width: 64px; min-height: 78px; object-fit: cover; }
 .journal-map-note-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; padding: 9px 10px; }
-.journal-map-note-copy strong { overflow: hidden; font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.journal-map-note-copy strong { overflow: hidden; font-size: 12px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .journal-map-note-copy em {
   display: -webkit-box;
   margin-top: 4px;

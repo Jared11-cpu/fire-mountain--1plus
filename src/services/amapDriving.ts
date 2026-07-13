@@ -2,6 +2,8 @@ import type { RoutePoint } from '../types/route';
 
 export const AMAP_MAX_WAYPOINTS = 16;
 
+let amapLoaderPromise: Promise<any> | undefined;
+
 export type RoadPlanStatus = 'loading' | 'planned' | 'no-data' | 'auth-error' | 'network-error' | 'fallback';
 
 export type RoadPlanMetrics = {
@@ -24,6 +26,31 @@ export type DrivingPlanResult = {
   durationSeconds: number;
   drivingInstances: any[];
 };
+
+export function loadAmapJsApi(key: string, securityCode?: string) {
+  if (securityCode) window._AMapSecurityConfig = { securityJsCode: securityCode };
+  if (window.AMap) return Promise.resolve(window.AMap);
+  if (amapLoaderPromise) return amapLoaderPromise;
+  amapLoaderPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-amap-js-api="2"]');
+    const finish = () => window.AMap ? resolve(window.AMap) : reject(new Error('AMap script loaded without window.AMap'));
+    if (existing) {
+      existing.addEventListener('load', finish, { once: true });
+      existing.addEventListener('error', () => reject(new Error('AMap script network load failed')), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.dataset.amapJsApi = '2';
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}&plugin=AMap.Driving`;
+    script.onload = finish;
+    script.onerror = () => reject(new Error('AMap script network load failed'));
+    document.head.appendChild(script);
+  }).catch((error) => {
+    amapLoaderPromise = undefined;
+    throw error;
+  });
+  return amapLoaderPromise;
+}
 
 export function splitDrivingPoints(points: Array<[number, number]>, maxWaypoints = AMAP_MAX_WAYPOINTS) {
   if (points.length < 2) return [];
