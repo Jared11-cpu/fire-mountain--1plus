@@ -80,6 +80,8 @@ test('overview metrics are directly editable and persist', async ({ page }) => {
   await page.getByLabel('总览预算总计').fill('750');
   await page.getByLabel('总览预算总计').press('Enter');
   await page.getByLabel('总览出发日期').fill('2026-08-01');
+  await page.getByLabel('总览出发时间').fill('07:20');
+  await expect(page.getByRole('region', { name: '总览出发安排' })).toBeVisible();
   await page.waitForTimeout(900);
 
   await page.reload();
@@ -87,6 +89,7 @@ test('overview metrics are directly editable and persist', async ({ page }) => {
   await expect(page.getByLabel('总览预计时长')).toHaveValue('6.5');
   await expect(page.getByLabel('总览预算总计')).toHaveValue('750');
   await expect(page.getByLabel('总览出发日期')).toHaveValue('2026-08-01');
+  await expect(page.getByLabel('总览出发时间')).toHaveValue('07:20');
 });
 
 test('route detail keeps map fixed and saves expanded place arrangements', async ({ page }) => {
