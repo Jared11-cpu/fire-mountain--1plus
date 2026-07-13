@@ -46,18 +46,16 @@ export function LandingPage({ onStart, onCitySelect, onFootprintDetail }: Landin
                 立即生成行程
                 <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
               </button>
-              <span className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-bold text-ink/45">已覆盖宜昌、武汉、恩施等 6 座城市</span>
             </div>
         </div>
       </section>
 
       <section className="section-pad py-14">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div className="mb-8">
             <div>
               <h2 className="font-display text-4xl font-black text-ink">湖北城市入口</h2>
             </div>
-            <p className="max-w-xl text-ink/60">选择城市，快速生成专属湖北路线。</p>
           </div>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {cities.map((city) => (
