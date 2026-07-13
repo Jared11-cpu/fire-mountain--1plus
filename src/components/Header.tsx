@@ -18,12 +18,12 @@ export function Header({ page, nav, onNavigate }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/60 bg-mist/80 backdrop-blur-2xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center gap-5 px-4 py-4 sm:px-6 lg:px-8">
         <button onClick={() => onNavigate('home')} className="rounded-2xl text-left transition hover:scale-[1.01] active:scale-95">
           <Logo />
         </button>
         <nav
-          className="relative hidden min-w-[380px] grid-cols-4 overflow-hidden rounded-full border border-white/70 bg-white/40 p-1.5 shadow-[0_18px_50px_rgba(18,34,42,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl lg:grid"
+          className="relative hidden min-w-0 flex-1 grid-cols-4 overflow-hidden rounded-full border border-white/70 bg-white/40 p-1.5 shadow-[0_18px_50px_rgba(18,34,42,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl lg:grid"
           style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
         >
           <span
@@ -45,7 +45,6 @@ export function Header({ page, nav, onNavigate }: HeaderProps) {
             </button>
           ))}
         </nav>
-        <div className="hidden w-[210px] lg:block" aria-hidden="true" />
       </div>
       <div className="px-4 pb-3 lg:hidden">
         <nav
