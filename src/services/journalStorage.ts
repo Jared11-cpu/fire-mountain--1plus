@@ -1,8 +1,9 @@
-import type { JournalEntry } from '../types/route';
+import type { JournalEntry, SmartRoute } from '../types/route';
 
 const DB = 'chuyou-journal';
 const STORE = 'photos';
 const META = 'chuyou-journal-entries';
+const ROUTE_META = 'chuyou-last-smart-route';
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -55,6 +56,14 @@ export function readEntries(): JournalEntry[] {
 export function writeEntries(entries: JournalEntry[]) {
   localStorage.setItem(META, JSON.stringify(entries));
   window.dispatchEvent(new Event('journal-change'));
+}
+
+export function readLastRoute(): SmartRoute | null {
+  try { return JSON.parse(localStorage.getItem(ROUTE_META) ?? 'null'); } catch { return null; }
+}
+
+export function writeLastRoute(route: SmartRoute) {
+  localStorage.setItem(ROUTE_META, JSON.stringify(route));
 }
 
 export async function clearJournal(entries: JournalEntry[]) {
