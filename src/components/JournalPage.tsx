@@ -119,7 +119,10 @@ function JournalRouteMap({ entries, photos }: { entries: JournalEntry[]; photos:
           resizeEnable: true,
           mapStyle: 'amap://styles/normal',
           features: ['bg', 'road', 'building', 'point'],
+          layers: [new AMap.TileLayer({ visible: true, zIndex: 1 })],
         });
+        map.setFeatures?.(['bg', 'road', 'building', 'point']);
+        map.setMapStyle?.('amap://styles/normal');
         mapInstance.current = map;
         const line = new AMap.Polyline({
           path: coordinates,
@@ -131,12 +134,13 @@ function JournalRouteMap({ entries, photos }: { entries: JournalEntry[]; photos:
         });
         map.add(line);
         const markers = points.map((entry, index) => {
+          const content = createJournalMapMarkerContent(entry, index, photos, () => setSelectedId(entry.id));
           const marker = new AMap.Marker({
             position: coordinates[index],
             anchor: 'bottom-center',
             title: entry.pointName,
-            content: `<button class="amap-smart-marker journal-amap-marker" aria-label="${index + 1} ${entry.pointName}"><span>${index + 1}</span></button>`,
-            label: { content: `<span class="amap-route-name">${entry.pointName}</span>`, direction: 'bottom', offset: new AMap.Pixel(0, 8) },
+            content,
+            offset: new AMap.Pixel(index % 2 === 0 ? -10 : -150, 0),
           });
           marker.on('click', () => setSelectedId(entry.id));
           map.add(marker);
@@ -150,7 +154,7 @@ function JournalRouteMap({ entries, photos }: { entries: JournalEntry[]; photos:
     }
     mountMap();
     return () => { disposed = true; mapInstance.current?.destroy(); mapInstance.current = undefined; };
-  }, [key, securityCode, points.map((entry) => `${entry.id}-${entry.city}`).join('|')]);
+  }, [key, securityCode, points.map((entry) => `${entry.id}-${entry.city}`).join('|'), Object.keys(photos).join('|')]);
 
   return (
     <section className="journal-map mt-5 overflow-hidden rounded-[1.7rem] border border-ink/8 p-5 shadow-soft">
@@ -195,6 +199,40 @@ function journalCoordinate(entry: JournalEntry, index: number): [number, number]
   const base = journalCityCoordinates[entry.city] ?? journalCityCoordinates.武汉;
   const offset = index * .012;
   return [base[0] + offset, base[1] + (index % 2 ? offset : -offset)];
+}
+
+function createJournalMapMarkerContent(entry: JournalEntry, index: number, photos: Record<string, string>, onSelect: () => void) {
+  const root = document.createElement('button');
+  root.type = 'button';
+  root.className = `journal-map-pin ${index % 2 === 0 ? 'journal-map-pin-right' : 'journal-map-pin-left'}`;
+  root.setAttribute('aria-label', `${index + 1} ${entry.pointName}，查看手账`);
+  root.addEventListener('click', onSelect);
+
+  const number = document.createElement('span');
+  number.className = 'journal-map-pin-number';
+  number.textContent = String(index + 1);
+  root.appendChild(number);
+
+  const note = document.createElement('span');
+  note.className = 'journal-map-note';
+  const photoId = entry.photoIds?.[0];
+  const photo = photoId ? photos[photoId] : '';
+  if (photo) {
+    const image = document.createElement('img');
+    image.src = photo;
+    image.alt = `${entry.pointName}旅行照片`;
+    note.appendChild(image);
+  }
+  const copy = document.createElement('span');
+  copy.className = 'journal-map-note-copy';
+  const title = document.createElement('strong');
+  title.textContent = entry.pointName;
+  const text = document.createElement('em');
+  text.textContent = entry.note || '这里等你写下自己的感想。';
+  copy.append(title, text);
+  note.appendChild(copy);
+  root.appendChild(note);
+  return root;
 }
 
 const demoJournalStops: JournalEntry[] = [
