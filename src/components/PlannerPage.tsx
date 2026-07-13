@@ -6,6 +6,7 @@ import { MapWorkspace } from './MapWorkspace';
 import { generateSmartRoute } from '../services/mapService';
 import { getBrowserLocation, makeMockLocation, mockLocationOptions } from '../services/locationService';
 import type { RoutePoint, SmartRoute, UserLocation } from '../types/route';
+import { writeLastRoute } from '../services/journalStorage';
 
 type PlannerPageProps = {
   initialCity: CityName;
@@ -56,6 +57,10 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
       }
     };
   }, []);
+
+  useEffect(() => {
+    writeLastRoute(smartRoute);
+  }, [smartRoute]);
 
   const toggleInterest = (item: string) => {
     setForm((prev) => ({
