@@ -35,9 +35,9 @@ export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, n
 
   return (
     <section className="map-workspace overflow-hidden rounded-[2rem] border border-ink/10 bg-white shadow-soft">
-      <div className="grid lg:h-[calc(100vh-7rem)] lg:min-h-[720px] lg:grid-cols-[56px_minmax(0,1fr)_410px]">
-        <nav className="flex gap-1 overflow-x-auto bg-ink px-2 py-3 text-white lg:flex-col lg:justify-center lg:overflow-visible">
-          <div className="flex gap-1 lg:flex-col">
+      <div className="grid lg:h-[calc(100vh-7rem)] lg:min-h-[720px] lg:grid-cols-[68px_minmax(0,1fr)_410px]">
+        <nav className="flex gap-2 overflow-x-auto bg-ink px-2.5 py-3 text-white lg:flex-col lg:justify-center lg:overflow-visible">
+          <div className="flex gap-2 lg:flex-col">
             {tabs.map((item) => (
               <SidebarTab
                 key={item.id}
@@ -93,11 +93,11 @@ function SidebarTab({ active, onClick, icon: Icon, short, label }: { active: boo
     <button
       onClick={onClick}
       title={label}
-      className={`group relative flex h-10 min-w-10 items-center justify-center rounded-xl text-sm font-black transition active:scale-95 lg:w-10 ${
+      className={`group relative flex h-12 min-w-12 items-center justify-center rounded-2xl text-sm font-black transition active:scale-95 lg:w-12 ${
         active ? 'bg-river text-white shadow-[0_8px_22px_rgba(14,107,114,.35)]' : 'bg-transparent text-white/42 hover:bg-white/8 hover:text-white'
       }`}
     >
-      <Icon className="hidden h-[17px] w-[17px] lg:block" strokeWidth={active ? 2.4 : 1.8} />
+      <Icon className="hidden h-5 w-5 lg:block" strokeWidth={active ? 2.5 : 1.9} />
       <span className="lg:hidden">{short}</span>
       <span className="sr-only">{label}</span>
     </button>
@@ -130,14 +130,30 @@ function SideTitle({eyebrow,title,desc}:{eyebrow:string;title:string;desc:string
 function InfoList({title,icon:Icon,items}:{title:string;icon:typeof MapPin;items:string[]}) { return <div><SideTitle eyebrow="LOCAL GUIDE" title={title} desc="根据路线顺序整理的实用建议。"/><div className="space-y-3">{items.map((item,index)=><div key={item} className="rounded-2xl border border-ink/8 bg-white p-4"><div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-river/10 text-river"><Icon className="h-4 w-4"/></span><div><div className="text-xs font-black text-tower">推荐 {String(index+1).padStart(2,'0')}</div><p className="mt-1 text-sm font-semibold leading-6 text-ink/65">{item}</p></div></div></div>)}</div></div> }
 
 function OverviewPanel({ route, plan, selected }: { route: SmartRoute; plan: TravelPlan; selected?: RoutePoint }) {
+  const [editableStats, setEditableStats] = useState(() => ({
+    points: String(route.points.length),
+    duration: route.estimatedTime,
+    budget: String(budgetTotal(plan)),
+    navigation: route.recommendedStartTime,
+  }));
+
+  useEffect(() => {
+    setEditableStats({
+      points: String(route.points.length),
+      duration: route.estimatedTime,
+      budget: String(budgetTotal(plan)),
+      navigation: route.recommendedStartTime,
+    });
+  }, [route.id, plan.title]);
+
   return (
     <div>
-      <SideTitle eyebrow="AI TRIP BRIEF" title="路线总览" desc="地图、交通、记录点和预算集中在同一张可交互行程卡里。" />
+      <SideTitle eyebrow="AI TRIP BRIEF" title="路线总览" desc="AI 给出初始建议，你可以直接修改以下内容。" />
       <div className="grid grid-cols-2 gap-3">
-        <MiniStat label="点位" value={`${route.points.length} 个`} />
-        <MiniStat label="耗时" value={route.estimatedTime} />
-        <MiniStat label="预算" value={`¥${budgetTotal(plan)}`} />
-        <MiniStat label="导航" value={route.recommendedStartTime} />
+        <EditableMiniStat label="点位" value={editableStats.points} suffix="个" inputMode="numeric" onChange={(points) => setEditableStats((prev) => ({ ...prev, points }))} />
+        <EditableMiniStat label="耗时" value={editableStats.duration} onChange={(duration) => setEditableStats((prev) => ({ ...prev, duration }))} />
+        <EditableMiniStat label="预算" value={editableStats.budget} prefix="¥" inputMode="numeric" onChange={(budget) => setEditableStats((prev) => ({ ...prev, budget }))} />
+        <EditableMiniStat label="导航" value={editableStats.navigation} onChange={(navigation) => setEditableStats((prev) => ({ ...prev, navigation }))} />
       </div>
       {selected && (
         <button className="mt-4 w-full rounded-2xl border border-river/20 bg-river/5 p-4 text-left">
@@ -501,12 +517,16 @@ function FoodPanel({ route, plan }: { route: SmartRoute; plan: TravelPlan }) {
   return <InfoList title="美食店铺推荐" icon={Utensils} items={foodItems} />;
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function EditableMiniStat({ label, value, onChange, prefix = '', suffix = '', inputMode = 'text' }: { label: string; value: string; onChange: (value: string) => void; prefix?: string; suffix?: string; inputMode?: 'text' | 'numeric' }) {
   return (
-    <div className="rounded-2xl border border-ink/8 bg-white p-4">
-      <div className="text-xs font-bold text-ink/42">{label}</div>
-      <div className="mt-1 font-display text-xl font-black text-ink">{value}</div>
-    </div>
+    <label className="rounded-2xl border border-ink/8 bg-white p-4 transition focus-within:border-river/30 focus-within:ring-4 focus-within:ring-river/8">
+      <span className="text-xs font-bold text-ink/42">{label} · 可修改</span>
+      <span className="mt-2 flex items-baseline gap-1 font-display text-xl font-black text-ink">
+        {prefix && <span>{prefix}</span>}
+        <input aria-label={`修改${label}`} inputMode={inputMode} value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 w-full bg-transparent font-display text-xl font-black text-ink outline-none" />
+        {suffix && <span className="shrink-0 text-sm text-ink/45">{suffix}</span>}
+      </span>
+    </label>
   );
 }
 
