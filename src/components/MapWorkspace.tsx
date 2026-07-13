@@ -5,6 +5,7 @@ import type { RoutePoint, SmartRoute } from '../types/route';
 import { budgetTotal, calculateTimeline, type BudgetItem, type PlannedRoutePoint, type TripRequest } from '../domain/trip';
 import { useTrip } from '../state/tripStore';
 import { resolveTransportPlan, toTransportPlanRequest, type TransportMode, type TransportPlanResponse } from '../services/transportService';
+import type { RoadPlanMetrics } from '../services/amapDriving';
 import { RouteMap } from './RouteMap';
 
 type Tab = 'overview' | 'stops' | 'days' | 'weather' | 'transport' | 'food' | 'budget';
@@ -22,6 +23,7 @@ export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, n
   const { plan: tripPlan, request, isReplanning, patchPlan, updatePlanSettings, updateBudgetItems, setBudgetTotal, updateRequest } = useTrip();
   const [tab, setTab] = useState<Tab>('overview');
   const [mobilePane, setMobilePane] = useState<'map' | 'details'>('map');
+  const [roadPlan, setRoadPlan] = useState<RoadPlanMetrics>({ status: 'loading', source: 'estimate', message: '正在请求高德道路规划…' });
   const selected = route.points.find((point) => point.id === selectedPointId) as PlannedRoutePoint | undefined ?? route.points[0] as PlannedRoutePoint;
   const patchRoutePoint = (id: string, changes: Partial<PlannedRoutePoint>) => patchPlan((value) => {
     const source: PlannedRoutePoint[] = (value.route.points as PlannedRoutePoint[]).map((point) => point.id === id ? { ...point, ...changes } as PlannedRoutePoint : point);
@@ -53,8 +55,8 @@ export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, n
           <CommandButton icon={isReplanning ? Loader2 : RefreshCw} label={isReplanning ? '计算中' : '重新规划'} disabled={isReplanning} onClick={onRegenerate} spin={isReplanning} />
           <CommandButton icon={Copy} label="复制文案" onClick={onCopySocial} />
         </div>
-        <RouteMap route={route} selectedPointId={selectedPointId} activePointIndex={activePointIndex} navigating={navigating} onSelectPoint={onSelectPoint} mapOnly />
-        <div className="pointer-events-none absolute bottom-4 left-4 right-4 z-20 grid gap-2 sm:grid-cols-3"><Metric label="规则估算距离" value={`${route.totalDistanceKm.toFixed(1)} km`} /><Metric label="出发时间" value={tripPlan.settings.departureTime} /><Metric label="当前点到达" value={selected?.arrivalTime ?? selected?.time ?? '--:--'} /></div>
+        <RouteMap route={route} selectedPointId={selectedPointId} activePointIndex={activePointIndex} navigating={navigating} onSelectPoint={onSelectPoint} onRoadPlanChange={setRoadPlan} mapOnly />
+        <div className="pointer-events-none absolute bottom-4 left-4 right-4 z-20 grid gap-2 sm:grid-cols-4"><Metric label={roadPlan.status === 'planned' ? '高德道路距离' : '估算距离'} value={roadPlan.status === 'loading' ? '计算中…' : `${(roadPlan.distanceKm ?? route.totalDistanceKm).toFixed(1)} km`} /><Metric label={roadPlan.status === 'planned' ? '预计行车' : '估算行车'} value={roadPlan.status === 'planned' && roadPlan.durationMinutes ? formatDriveDuration(roadPlan.durationMinutes) : '道路结果不可用'} /><Metric label="出发时间" value={tripPlan.settings.departureTime} /><Metric label="当前点到达" value={selected?.arrivalTime ?? selected?.time ?? '--:--'} /></div>
       </div>
 
       <aside aria-label="方案详情" className={`${mobilePane === 'details' ? 'flex' : 'hidden'} min-h-0 min-w-0 flex-col overflow-hidden bg-[#fffdf7] lg:flex`}>
@@ -180,5 +182,6 @@ function BudgetRow({ item, index, onUpdate, onDelete }: { item: BudgetItem; inde
 
 function CommandButton({ icon: Icon, label, onClick, disabled, spin }: { icon: typeof RefreshCw; label: string; onClick?: () => void; disabled?: boolean; spin?: boolean }) { return <button type="button" aria-label={label} disabled={disabled} onClick={onClick} className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-black text-ink shadow-soft backdrop-blur disabled:opacity-60"><Icon className={`h-4 w-4 ${spin ? 'animate-spin' : ''}`} />{label}</button>; }
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-2xl bg-ink/88 p-3 text-white shadow-soft backdrop-blur"><div className="text-[10px] font-black uppercase tracking-wider text-white/55">{label}</div><div className="mt-1 font-black">{value}</div></div>; }
+function formatDriveDuration(minutes: number) { const hours = Math.floor(minutes / 60); const rest = minutes % 60; return hours > 0 ? `${hours}小时${rest ? `${rest}分` : ''}` : `${rest}分钟`; }
 function EditableMetric({ label, value, min, max, step = 1, prefix = '', suffix = '', onCommit }: { label: string; value: number; min: number; max: number; step?: number; prefix?: string; suffix?: string; onCommit: (value: number) => void }) { const [draft, setDraft] = useState(String(value)); useEffect(() => setDraft(String(value)), [value]); const commit = () => { const parsed = Number(draft); const next = Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : value; setDraft(String(next)); onCommit(next); }; return <label className="rounded-2xl bg-white p-4 shadow-sm transition focus-within:ring-4 focus-within:ring-jade/15"><span className="block text-xs font-black text-ink/50">{label}</span><span className="mt-2 flex items-baseline gap-1 font-display text-xl font-black text-ink">{prefix && <span>{prefix}</span>}<input aria-label={`总览${label}`} type="number" min={min} max={max} step={step} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={commit} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }} className="focus-ring min-w-0 w-full bg-transparent font-display text-xl font-black text-ink" />{suffix && <span className="shrink-0 text-sm">{suffix}</span>}</span></label>; }
 

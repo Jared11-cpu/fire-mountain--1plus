@@ -2,6 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: '/',
+  base: '/fire-mountain--1plus/',
   plugins: [react()],
 });

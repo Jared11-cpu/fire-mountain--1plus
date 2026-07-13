@@ -21,7 +21,7 @@ npm run preview
 - 首页 Landing Page：项目 Logo、Slogan、湖北城市入口、游客/景区/民宿/文旅部门价值展示。
 - AI 旅行规划页：目的地、天数、预算、兴趣、人群和自然语言输入，点击生成后直接切换到地图工作台，避免输入页与地图页同屏堆叠。
 - 交互式 AI 行程工作台：把页面做成“左侧功能侧栏 + 中间实况地图 + 右侧行程面板”的行程图片卡式体验，但保留可点击交互。
-- 定位 + AI 路线地图：支持浏览器定位、Mock 出发地、模拟高德地图风格路线、Marker 点位详情和路线导航高亮。
+- 定位 + 道路路线地图：支持浏览器定位、示例出发地、高德 JS API 2.0 Driving 道路规划、Marker 点位详情和路线导航高亮。
 - 交通/沿路景点/美食/预算/每日记录/天气预警模块：在同一个行程工作台内切换，预算支持用户自定义输入，每日记录支持日期和打卡，天气预警按路线起点实时刷新。
 - 旅行足迹详情：首页足迹数字可直接跳转到旅行手账详情页，查看地点、里程、城市和照片。
 - 沿途 AI 观察：根据路线生成风景亮点、最佳拍照时间、短视频镜头、社交文案和不同人群记录重点。
@@ -48,15 +48,15 @@ npm run preview
 AI 规划页新增了“定位 + 路线 + 沿途记录点”能力：
 
 - `src/services/locationService.ts`：封装浏览器 Geolocation 调用、定位失败处理和 Mock 出发地。
-- `src/services/mapService.ts`：封装路线生成入口，后续可替换为高德路径规划结果。
+- `src/services/mapService.ts`：封装路线生成入口；`src/services/amapDriving.ts` 负责 Driving 分段请求、道路几何、距离和时间解析。
 - `src/data/routeData.ts`：内置武汉、宜昌、恩施、荆州、襄阳、黄石的 Mock 路线、经纬度、拍照建议和沿途观察。
 - `src/components/MapWorkspace.tsx`：交互式行程工作台，包含左侧侧栏、路线地图、沿路景点、日程、交通、美食和预算。
-- `src/components/RouteMap.tsx`：可接入高德地图 JS API；Key 权限不足时使用高德瓦片底图兜底，未启用或加载失败时自动回退为可点击的 SVG/CSS 模拟路线地图。
+- `src/components/RouteMap.tsx`：接入高德 JS API 2.0 `AMap.Driving`；成功时只绘制 `result.routes[0].steps.path` 道路几何，失败时明确显示红色虚线点位连线和错误状态。
 - `src/components/ItineraryImageCard.tsx`：保留为后续导出分享图的扩展组件，当前主页面以可交互工作台为主。
 - `src/components/RouteInsightPanel.tsx`：展示沿途风景亮点、拍照时间、短视频镜头和人群化记录建议。
 - `src/types/route.ts`：定义 `RoutePoint`、`SmartRoute`、`UserLocation` 等结构。
 
-当前地图为前端模拟 Demo，不依赖真实后端。用户可以点击“使用当前位置”调用浏览器定位；如果拒绝授权或浏览器不支持定位，系统会回退到武汉站、宜昌东站、恩施站、荆州站、襄阳东站、黄石北站等 Mock 出发地。
+路线规划由浏览器直接调用高德 JS API 2.0 Driving，不依赖自建后端。用户可以点击“使用当前位置”调用浏览器定位；如果拒绝授权或浏览器不支持定位，系统会回退到武汉站、宜昌东站、恩施站、荆州站、襄阳东站、黄石北站等示例出发地。只有高德返回 `complete` 且存在 `routes[0]` 时，界面才显示真实道路距离和预计行车时间；否则只显示带“估算”标识的点位虚线。
 
 如需启用真实高德地图，可在 `.env.local` 中配置：
 
@@ -71,6 +71,18 @@ VITE_AMAP_SECURITY_CODE=你的高德安全密钥
 - JS API Key 的 Web 端域名白名单包含本地演示域名，例如 `localhost:5173`，以及后续部署域名。
 - Key 已开通 JS API 2.0 和驾车路径规划相关服务权限。
 - GitHub Pages 部署后，需要把 `Jared11-cpu.github.io` 对应页面域名加入白名单。
+
+### 生产环境安全说明
+
+Vite 会把所有 `VITE_` 变量写入浏览器可下载的构建产物，因此 `VITE_AMAP_KEY` 和 `VITE_AMAP_SECURITY_CODE` **不是完全保密的服务端秘密**。生产部署应使用高德“Web 端（JS API）”Key，启用安全密钥校验、精确配置域名白名单并设置合理配额和告警；任何服务端 Web 服务私钥都必须保存在后端，不能通过 `VITE_` 变量下发。
+
+GitHub Pages workflow 可从 Actions Variables 或 Secrets 读取：
+
+- `VITE_AMAP_ENABLED`：建议 Variable，值为 `true`。
+- `VITE_AMAP_KEY`：可配置为 Secret 或 Variable。
+- `VITE_AMAP_SECURITY_CODE`：可配置为 Secret 或 Variable。
+
+未配置、授权失败、网络失败或高德无路线数据时，页面会分别显示 `auth-error`、`network-error`、`no-data` 或 `fallback` 降级状态，不会把景点经纬度直线宣称为真实道路。
 
 ## 后续接入真实 AI API 的位置
 
