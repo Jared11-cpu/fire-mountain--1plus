@@ -40,7 +40,7 @@ function App() {
       <Header page={page} nav={navItems} onNavigate={navigate} />
       {page === 'home' && <LandingPage onStart={(prompt) => { setPlannerPrompt(prompt ?? ''); navigate('planner'); }} onCitySelect={selectCity} onFootprintDetail={openFootprintDetail} />}
       {page === 'planner' && <PlannerPage initialCity={plannerCity} initialPrompt={plannerPrompt} />}
-      {page === 'journal' && <JournalPage onPlan={() => navigate('planner')} initialFocus={journalFocus} />}
+      {page === 'journal' && <JournalPage initialFocus={journalFocus} />}
       {page === 'pitch' && <PitchPage />}
       <Footer />
     </div>
