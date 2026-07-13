@@ -189,7 +189,7 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
         <div className="mb-8">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.2em] text-river">AI Travel Planner</p>
-            <h1 className="mt-2 font-display text-4xl font-black text-ink md:text-5xl">一句话生成完整湖北旅行方案</h1>
+            <h1 className="mt-2 font-display text-4xl font-black text-ink md:text-5xl">懂你，也懂湖北</h1>
             <p className="mt-4 max-w-2xl text-ink/65">输入需求，生成路线、预算、打卡点和传播文案。</p>
           </div>
         </div>
@@ -243,18 +243,34 @@ export function PlannerPage({ initialCity, initialPrompt = '' }: PlannerPageProp
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="出行天数">
-                <div className="grid grid-cols-3 gap-2">
-                  {dayOptions.map((day) => (
-                    <button
-                      key={day}
-                      onClick={() => setForm((prev) => ({ ...prev, days: day }))}
-                      className={`rounded-2xl py-3 text-sm font-black transition active:scale-95 ${
-                        form.days === day ? 'bg-river text-white' : 'bg-white/70 text-ink/70 hover:bg-white'
-                      }`}
-                    >
-                      {day} 天
-                    </button>
-                  ))}
+                <div className="rounded-3xl bg-white/70 p-3 shadow-sm">
+                  <div className="flex items-center rounded-2xl border border-white/70 bg-white px-4 py-3 shadow-sm focus-within:ring-4 focus-within:ring-jade/20">
+                    <input
+                      type="number"
+                      min={1}
+                      max={15}
+                      step={1}
+                      value={form.days}
+                      onChange={(event) => setForm((prev) => ({ ...prev, days: Math.min(15, Math.max(1, Number(event.target.value) || 1)) }))}
+                      className="w-full bg-transparent text-lg font-black text-ink outline-none"
+                      aria-label="自定义出行天数"
+                    />
+                    <span className="ml-2 shrink-0 text-sm font-black text-ink/45">天</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {dayOptions.map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, days: day }))}
+                        className={`rounded-xl py-2 text-xs font-black transition active:scale-95 ${
+                          form.days === day ? 'bg-river text-white' : 'bg-ink/5 text-ink/55 hover:bg-river/10 hover:text-river'
+                        }`}
+                      >
+                        {day} 天
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </Field>
               <Field label="预算">
