@@ -1,6 +1,27 @@
 import type { CityName } from './mockData';
 import type { RoutePoint, SmartRoute } from '../types/route';
 
+const yichangStationMedia = {
+  imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3c/Platforms_of_Yichang_East_Railway_Station.JPG',
+  imageCredit: { author: 'CaiDie', license: 'CC BY-SA 3.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Platforms_of_Yichang_East_Railway_Station.JPG' },
+};
+const threeGorgesMedia = {
+  imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Three_Gorges_Dam.jpg',
+  imageCredit: { author: 'Dan Kamminga', license: 'CC BY-SA 2.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Three_Gorges_Dam.jpg' },
+};
+const yichangRiverMedia = {
+  imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/41/%E4%BB%8E%E6%BB%A8%E6%B1%9F%E5%85%AC%E5%9B%AD%E7%9C%8B%E5%AF%B9%E9%9D%A2%E7%9A%84%E9%9B%A8_-_panoramio.jpg',
+  imageCredit: { author: 'Danny Luo', license: 'CC BY-SA 3.0', sourceUrl: 'https://commons.wikimedia.org/wiki/File:%E4%BB%8E%E6%BB%A8%E6%B1%9F%E5%85%AC%E5%9B%AD%E7%9C%8B%E5%AF%B9%E9%9D%A2%E7%9A%84%E9%9B%A8_-_panoramio.jpg' },
+};
+
+const pointMedia: Record<string, Pick<RoutePoint, 'imageUrl' | 'imageCredit'>> = {
+  三峡游客中心: threeGorgesMedia,
+  坛子岭观景台: threeGorgesMedia,
+  '185 平台': threeGorgesMedia,
+  西坝不夜城: yichangRiverMedia,
+  滨江公园夜景: yichangRiverMedia,
+};
+
 export const mockStartPoints: Record<CityName, RoutePoint> = {
   武汉: {
     id: 'start-wuhan',
@@ -27,6 +48,7 @@ export const mockStartPoints: Record<CityName, RoutePoint> = {
     reason: '宜昌东站连接三峡游客中心和城区，适合三峡主题路线出发。',
     photoTip: '出站后拍车票、行李箱和宜昌站牌，建立旅行起点。',
     recordTip: '记录预算和偏好，突出“600 元玩三峡江景和美食”。',
+    ...yichangStationMedia,
   },
   恩施: {
     id: 'start-enshi',
@@ -185,7 +207,7 @@ function makePoint(
   photoTip: string,
   recordTip: string,
 ): RoutePoint {
-  return { id, name, type, city, lat, lng, time, stayMinutes, reason, photoTip, recordTip };
+  return { id, name, type, city, lat, lng, time, stayMinutes, reason, photoTip, recordTip, ...pointMedia[name] };
 }
 
 function makeRoute(
@@ -202,3 +224,4 @@ function makeRoute(
 ): Omit<SmartRoute, 'startPoint' | 'points'> & { points: RoutePoint[] } {
   return { id, title, city, totalDistanceKm, estimatedTime, transportSuggestion, recommendedStartTime, avoidTips, points, sceneryAnalysis };
 }
+
