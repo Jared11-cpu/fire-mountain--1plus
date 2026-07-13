@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CircleDollarSign, AlertTriangle, Bus, CalendarDays, Camera, Check, CheckCircle2, ChevronRight, Clock3, CloudSun, Copy, ExternalLink, MapPin, Minus, Navigation, PencilLine, Plus, RefreshCw, Sparkles, TrainFront, Umbrella, Utensils, Wind, X } from 'lucide-react';
+import { CircleDollarSign, AlertTriangle, Bus, CalendarDays, Camera, Check, CheckCircle2, ChevronRight, Clock3, CloudSun, Copy, ExternalLink, MapPin, Minus, PencilLine, Plus, RefreshCw, Sparkles, TrainFront, Umbrella, Utensils, Wind, X } from 'lucide-react';
 import type { TravelPlan } from '../utils/aiGenerator';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { RouteMap } from './RouteMap';
@@ -35,10 +35,9 @@ export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, n
 
   return (
     <section className="map-workspace overflow-hidden rounded-[2rem] border border-ink/10 bg-white shadow-soft">
-      <div className="grid lg:h-[calc(100vh-7rem)] lg:min-h-[720px] lg:grid-cols-[76px_minmax(0,1fr)_410px]">
-        <nav className="flex gap-2 overflow-x-auto bg-ink p-3 text-white lg:flex-col lg:overflow-visible">
-          <div className="hidden h-12 w-12 place-items-center rounded-2xl bg-white/10 font-display text-xl font-black text-jade lg:grid">楚</div>
-          <div className="flex gap-2 lg:mt-5 lg:flex-col">
+      <div className="grid lg:h-[calc(100vh-7rem)] lg:min-h-[720px] lg:grid-cols-[56px_minmax(0,1fr)_410px]">
+        <nav className="flex gap-1 overflow-x-auto bg-ink px-2 py-3 text-white lg:flex-col lg:justify-center lg:overflow-visible">
+          <div className="flex gap-1 lg:flex-col">
             {tabs.map((item) => (
               <SidebarTab
                 key={item.id}
@@ -55,7 +54,6 @@ export function MapWorkspace({ route, plan, selectedPointId, activePointIndex, n
         <div className="relative min-h-[68vh] min-w-0 overflow-hidden border-ink/10 lg:border-r">
           <div className="absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
             <CommandButton icon={RefreshCw} label="重新规划" onClick={onRegenerate} />
-            <CommandButton icon={Navigation} label={navigating ? '导航中' : '模拟导航'} onClick={onSimulateNavigation} disabled={navigating} />
             <CommandButton icon={Copy} label="复制文案" onClick={onCopySocial} />
           </div>
           <div className="h-full min-w-0">
@@ -95,11 +93,11 @@ function SidebarTab({ active, onClick, icon: Icon, short, label }: { active: boo
     <button
       onClick={onClick}
       title={label}
-      className={`group flex h-12 min-w-12 items-center justify-center rounded-2xl text-sm font-black transition active:scale-95 lg:w-12 ${
-        active ? 'bg-river text-white shadow-lg shadow-river/25' : 'bg-white/10 text-white/65 hover:bg-white/20 hover:text-white'
+      className={`group relative flex h-10 min-w-10 items-center justify-center rounded-xl text-sm font-black transition active:scale-95 lg:w-10 ${
+        active ? 'bg-river text-white shadow-[0_8px_22px_rgba(14,107,114,.35)]' : 'bg-transparent text-white/42 hover:bg-white/8 hover:text-white'
       }`}
     >
-      <Icon className="hidden h-4 w-4 lg:block" />
+      <Icon className="hidden h-[17px] w-[17px] lg:block" strokeWidth={active ? 2.4 : 1.8} />
       <span className="lg:hidden">{short}</span>
       <span className="sr-only">{label}</span>
     </button>
