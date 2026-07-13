@@ -1,10 +1,11 @@
 export function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`brand-mark relative grid shrink-0 place-items-center overflow-hidden rounded-[22%] bg-ink text-white ${compact ? 'h-10 w-10' : 'h-14 w-14'}`}>
+    <div className={`brand-mark relative grid shrink-0 place-items-center overflow-hidden rounded-[28%] text-white ${compact ? 'h-10 w-10' : 'h-14 w-14'}`}>
       <svg viewBox="0 0 64 64" role="img" aria-label="楚游智导 AI 标识" className="h-full w-full">
-        <path d="M15 43 C24 43 26 23 38 23 H47" fill="none" stroke="#F8FFFC" strokeWidth="4" strokeLinecap="round"/>
-        <circle cx="48" cy="23" r="4" fill="#D35236"/>
-        <text x="43" y="51" fill="#2FB98E" fontSize="7" fontWeight="900" fontFamily="sans-serif" letterSpacing="1">AI</text>
+        <path d="M12 42 C19 36 23 26 30 22 C35 28 38 33 43 34 C47 34 50 31 53 27" fill="none" stroke="#F8FFFC" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M13 46 C24 49 35 48 48 43" fill="none" stroke="#8EE6CC" strokeWidth="2.8" strokeLinecap="round"/>
+        <circle cx="52" cy="24" r="4" fill="#F06A4D" stroke="#F8FFFC" strokeWidth="1.5"/>
+        <path d="M46 49 V55 M43 52 H49" stroke="#F8FFFC" strokeWidth="1.6" strokeLinecap="round"/>
       </svg>
     </div>
   );
