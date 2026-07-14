@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "build": "node scripts/clean-dist.mjs && tsc -b && vite build --outDir dist/client && node scripts/prepare-sites.mjs",
+    "build": "node scripts/clean-dist.mjs && tsc -b && vite build --base=/ --outDir dist/client && node scripts/prepare-sites.mjs",
     "build:static": "tsc -b && vite build",
     "preview": "vite preview"
   },

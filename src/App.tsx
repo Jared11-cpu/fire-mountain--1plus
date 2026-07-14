@@ -33,6 +33,7 @@ function App() {
         <Route path="/" element={<LandingPage onStart={(prompt) => { if (prompt) updateRequest({ freeText: prompt }); go('planner'); }} onCitySelect={(city) => { selectCity(city); go('planner'); }} onFootprintDetail={() => go('journal')} />} />
         <Route path="/planner" element={<PlannerPage />} />
         <Route path="/journal" element={<JournalPage />} />
+        <Route path="/journal/:entryId" element={<JournalPage />} />
         <Route path="/about" element={<PitchPage />} />
         <Route path="/plan/:planId" element={<SharedPlanPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

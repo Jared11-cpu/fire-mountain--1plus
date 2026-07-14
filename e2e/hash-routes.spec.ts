@@ -7,7 +7,7 @@ test('HashRouter direct refresh and browser history', async ({ page }) => {
   await expect(page.getByLabel('开始日期')).toBeVisible();
   await page.getByRole('button', { name: '旅行手账' }).click();
   await expect(page).toHaveURL(/#\/journal$/);
-  await expect(page.getByText('0 条真实记录')).toBeVisible();
+  await expect(page.getByText('还没有真实记录，先在右侧写下第一站。')).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/#\/planner$/);
   await page.goto('/#/about');
@@ -44,6 +44,27 @@ test('edits survive detail tab switches and refresh', async ({ page }) => {
   await expect(page.getByLabel('第1天手记')).toHaveValue('切换标签后必须保留');
 });
 
+test('journal uses a 7:3 map spread and opens a durable A4 detail page', async ({ page }) => {
+  await page.goto('/#/journal');
+  const mapPaper = page.getByRole('region', { name: '旅行手账地图' });
+  const form = page.getByRole('region', { name: '新增旅行记录' });
+  const mapBox = await mapPaper.boundingBox();
+  const formBox = await form.boundingBox();
+  expect((mapBox?.width ?? 0) / (formBox?.width ?? 1)).toBeGreaterThan(1.8);
+
+  await page.getByLabel('地点 *').fill('东湖听风');
+  await page.getByLabel('手账心得（与照片至少填一项）').fill('湖面有风，傍晚的树影像慢慢翻过去的一页。');
+  await page.getByRole('button', { name: '保存这一页' }).click();
+  await expect(page.getByRole('tab', { name: '真实足迹 1' })).toBeVisible();
+  await page.getByRole('button', { name: /东湖听风/ }).click();
+  await expect(page).toHaveURL(/#\/journal\/.+/);
+  await expect(page.getByRole('heading', { name: '东湖听风' })).toBeVisible();
+  await expect(page.getByText('湖面有风，傍晚的树影像慢慢翻过去的一页。')).toBeVisible();
+  await expect(page.getByText('也感谢认真记录当下的自己。')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '东湖听风' })).toBeVisible();
+});
+
 test('overview metrics are directly editable and persist', async ({ page }) => {
   await page.goto('/#/planner');
   await page.getByRole('button', { name: '规则引擎生成演示' }).click();
@@ -59,6 +80,8 @@ test('overview metrics are directly editable and persist', async ({ page }) => {
   await page.getByLabel('总览预算总计').fill('750');
   await page.getByLabel('总览预算总计').press('Enter');
   await page.getByLabel('总览出发日期').fill('2026-08-01');
+  await page.getByLabel('总览出发时间').fill('07:20');
+  await expect(page.getByRole('region', { name: '总览出发安排' })).toBeVisible();
   await page.waitForTimeout(900);
 
   await page.reload();
@@ -66,6 +89,7 @@ test('overview metrics are directly editable and persist', async ({ page }) => {
   await expect(page.getByLabel('总览预计时长')).toHaveValue('6.5');
   await expect(page.getByLabel('总览预算总计')).toHaveValue('750');
   await expect(page.getByLabel('总览出发日期')).toHaveValue('2026-08-01');
+  await expect(page.getByLabel('总览出发时间')).toHaveValue('07:20');
 });
 
 test('route detail keeps map fixed and saves expanded place arrangements', async ({ page }) => {

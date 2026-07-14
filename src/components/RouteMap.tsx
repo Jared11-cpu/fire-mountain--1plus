@@ -1,39 +1,68 @@
-import { useEffect, useRef, useState } from 'react';
-import { Camera, Clock3, LocateFixed, MapPin, Navigation, Route as RouteIcon, Utensils } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Camera, Clock3, MapPin, Navigation, RefreshCw, Route as RouteIcon, Utensils } from 'lucide-react';
 import type { RoutePoint, SmartRoute } from '../types/route';
 import { getPointTypeLabel } from '../services/mapService';
+import { classifyDrivingFailure, loadAmapJsApi, planAmapDrivingRoute, type DrivingSearchFailure, type RoadPlanMetrics, type RoadPlanStatus } from '../services/amapDriving';
 
 declare global { interface Window { AMap?: any; _AMapSecurityConfig?: { securityJsCode: string } } }
 
-type Props = { route: SmartRoute; selectedPointId?: string; activePointIndex: number; navigating: boolean; onSelectPoint: (point: RoutePoint) => void; onDistanceCalculated?: (distanceKm: number) => void; mapOnly?: boolean };
+type Props = { route: SmartRoute; selectedPointId?: string; activePointIndex: number; navigating: boolean; onSelectPoint: (point: RoutePoint) => void; onRoadPlanChange?: (metrics: RoadPlanMetrics) => void; mapOnly?: boolean };
 const icons: Record<RoutePoint['type'], typeof MapPin> = { start: Navigation, scenic: MapPin, food: Utensils, photo: Camera, rest: Clock3, hotel: MapPin, end: RouteIcon };
 
-export function RouteMap({ route, selectedPointId, onSelectPoint, onDistanceCalculated, mapOnly = false }: Props) {
+export function RouteMap({ route, selectedPointId, onSelectPoint, onRoadPlanChange, mapOnly = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>();
   const markerRef = useRef<any[]>([]);
-  const [status, setStatus] = useState<'loading'|'ready'|'raster'|'fallback'>('loading');
+  const overlayRef = useRef<any[]>([]);
+  const drivingRef = useRef<any[]>([]);
+  const requestIdRef = useRef(0);
+  const [status, setStatus] = useState<RoadPlanStatus>('loading');
   const [message, setMessage] = useState('正在载入高德真实地图…');
+  const [retryVersion, setRetryVersion] = useState(0);
+  const [mapAvailable, setMapAvailable] = useState(false);
   const selected = route.points.find((p) => p.id === selectedPointId) ?? route.points[0];
   const amapEnabled = import.meta.env.VITE_AMAP_ENABLED !== 'false';
-  const key = import.meta.env.VITE_AMAP_KEY as string | undefined;
-  const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE as string | undefined;
+  const key = import.meta.env.VITE_AMAP_KEY;
+  const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE;
+  const routeSignature = useMemo(() => route.points.map(({ id, lng, lat }) => `${id}:${lng},${lat}`).join('|'), [route.points]);
 
   useEffect(() => {
     let disposed = false;
+    const requestId = ++requestIdRef.current;
+    const isCurrent = () => !disposed && requestId === requestIdRef.current;
+    const publish = (metrics: RoadPlanMetrics) => {
+      if (!isCurrent()) return;
+      setStatus(metrics.status);
+      setMessage(metrics.message);
+      onRoadPlanChange?.(metrics);
+    };
+    const cleanupMap = () => {
+      for (const driving of drivingRef.current) driving?.clear?.();
+      drivingRef.current = [];
+      if (mapRef.current) {
+        if (overlayRef.current.length) mapRef.current.remove?.(overlayRef.current);
+        if (markerRef.current.length) mapRef.current.remove?.(markerRef.current);
+        mapRef.current.clearMap?.();
+        mapRef.current.destroy?.();
+      }
+      overlayRef.current = [];
+      markerRef.current = [];
+      mapRef.current = undefined;
+    };
     async function mount() {
       if (!container.current) return;
-      if (!amapEnabled || !key) { setStatus('raster'); setMessage('未配置高德 JS API Key，当前显示高德瓦片底图与规则路线点，不代表实时路况。'); return; }
+      cleanupMap();
+      setMapAvailable(false);
+      publish({ status: 'loading', source: 'estimate', message: '正在请求高德道路规划…' });
+      if (!amapEnabled || !key) {
+        publish({ status: 'auth-error', source: 'estimate', distanceKm: route.totalDistanceKm, message: '未配置高德 JS API Key，道路规划不可用。' });
+        return;
+      }
       try {
-        if (securityCode) window._AMapSecurityConfig = { securityJsCode: securityCode };
-        if (!window.AMap) await new Promise<void>((resolve, reject) => {
-          const existing = document.querySelector<HTMLScriptElement>('script[data-amap]');
-          if (existing) { existing.addEventListener('load', () => resolve(), { once: true }); existing.addEventListener('error', reject, { once: true }); return; }
-          const script = document.createElement('script'); script.dataset.amap = 'true'; script.src = `https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.Driving`; script.onload = () => resolve(); script.onerror = reject; document.head.appendChild(script);
-        });
-        if (disposed || !container.current || !window.AMap) return;
-        const AMap = window.AMap;
-        mapRef.current?.destroy();
+        const AMap = await loadAmapJsApi(key, securityCode);
+        if (!isCurrent() || !container.current) return;
+        await loadAmapPlugin(AMap, 'AMap.Driving');
+        if (!isCurrent() || !container.current) return;
         const map = new AMap.Map(container.current, {
           zoom: 12,
           center: [route.points[0].lng, route.points[0].lat],
@@ -46,41 +75,71 @@ export function RouteMap({ route, selectedPointId, onSelectPoint, onDistanceCalc
         map.setFeatures?.(['bg', 'road', 'building', 'point']);
         map.setMapStyle?.('amap://styles/normal');
         mapRef.current = map;
+        setMapAvailable(true);
 
         markerRef.current = route.points.map((point, index) => createRouteMarker(AMap, map, point, index, onSelectPoint));
-        const routeResult = await drawAmapDrivingRoute(AMap, map, route.points);
-        if (routeResult.distanceKm) onDistanceCalculated?.(routeResult.distanceKm);
-        window.requestAnimationFrame(() => map.resize?.());
-        map.setFitView([...routeResult.overlays, ...markerRef.current], false, [90, 90, 90, 90]);
-        if (routeResult.planned) {
-          setStatus('ready');
-          setMessage('高德地图已连接，已按道路网络生成驾车路线；结果不代表实时路况或正式导航。');
-        } else {
-          setStatus('ready');
-          setMessage(routeResult.realLegs > 0
-            ? `已按真实道路生成 ${routeResult.realLegs} 段路线；另有 ${routeResult.failedLegs} 段暂未获得导航结果，未使用直线替代。`
-            : '高德底图已显示，但路径规划服务未返回道路路线。请检查 JS API Key、安全密钥和域名白名单。');
+        const routeResult = await planAmapDrivingRoute(AMap, route.points);
+        if (!isCurrent()) {
+          routeResult.drivingInstances.forEach((driving) => driving?.clear?.());
+          return;
         }
-      } catch { setStatus('raster'); setMessage('道路规划加载失败，已切换高德底图瓦片并保留规则路线点；请使用右侧文字路线。'); }
+        drivingRef.current = routeResult.drivingInstances;
+        overlayRef.current = addRoadPolyline(AMap, map, routeResult.path);
+        window.requestAnimationFrame(() => map.resize?.());
+        map.setFitView([...overlayRef.current, ...markerRef.current], false, [90, 90, 90, 90]);
+        publish({
+          status: 'planned',
+          source: 'amap-driving',
+          distanceKm: Number((routeResult.distanceMeters / 1000).toFixed(1)),
+          durationMinutes: Math.max(1, Math.round(routeResult.durationSeconds / 60)),
+          message: '高德真实道路路线已生成；距离与行车时间来自本次 Driving 结果。',
+        });
+      } catch (caught) {
+        const failure = normalizeFailure(caught);
+        console.error('AMap driving failed', { status: failure.status, result: failure.result, error: failure.error });
+        if (!isCurrent()) return;
+        const failureStatus = classifyDrivingFailure(failure);
+        if (mapRef.current && window.AMap) {
+          overlayRef.current = addFallbackPolyline(window.AMap, mapRef.current, route.points);
+          mapRef.current.setFitView?.([...overlayRef.current, ...markerRef.current], false, [90, 90, 90, 90]);
+        }
+        publish({ status: failureStatus, source: 'estimate', distanceKm: route.totalDistanceKm, message: failureMessage(failureStatus) });
+      }
     }
-    mount(); return () => { disposed = true; mapRef.current?.destroy(); mapRef.current = undefined; };
-  }, [route.id, amapEnabled, key, securityCode]);
+    mount();
+    return () => {
+      disposed = true;
+      requestIdRef.current += 1;
+      cleanupMap();
+    };
+  }, [route.id, routeSignature, route.totalDistanceKm, amapEnabled, key, securityCode, retryVersion, onRoadPlanChange]);
 
   useEffect(() => {
-    if (!selected || status !== 'ready' || !mapRef.current) return;
+    if (!selected || !mapAvailable || !mapRef.current) return;
     mapRef.current.resize?.();
     mapRef.current.setZoomAndCenter(15, [selected.lng, selected.lat], false, 350);
-  }, [selected?.id, status]);
+  }, [selected?.id, mapAvailable]);
 
-  const fallback = status === 'fallback';
-  const raster = status === 'raster';
+  const failed = status !== 'loading' && status !== 'planned';
 
   return <section className={`min-w-0 overflow-hidden bg-white ${mapOnly ? 'h-full' : 'rounded-[1.75rem] shadow-soft ring-1 ring-ink/5'}`}>
     {!mapOnly && <div className="flex flex-col gap-4 border-b border-ink/5 p-5 md:flex-row md:items-center md:justify-between"><div><div className="inline-flex items-center gap-2 text-xs font-black tracking-[.16em] text-river"><Navigation className="h-4 w-4"/>LIVE ROUTE</div><h3 className="mt-2 font-display text-2xl font-black">{route.title}</h3><p className="mt-1 text-sm text-ink/50">{message}</p></div><div className="flex gap-2 text-xs font-bold"><span className="rounded-full bg-mist px-3 py-2">{route.totalDistanceKm} km</span><span className="rounded-full bg-mist px-3 py-2">{route.recommendedStartTime} 出发</span></div></div>}
-      <div className={mapOnly ? 'h-full min-w-0' : 'grid min-w-0 lg:grid-cols-[1.35fr_.65fr]'}><div className={`relative min-w-0 overflow-hidden bg-[#d8f1ee] ${mapOnly ? 'h-full min-h-[620px]' : 'min-h-[430px]'}`}><div ref={container} className={`absolute inset-0 ${fallback || raster ? 'hidden' : ''}`}/>{raster&&<GaodeRasterRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}{fallback&&<FallbackRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}</div>
+      <div className={mapOnly ? 'h-full min-w-0' : 'grid min-w-0 lg:grid-cols-[1.35fr_.65fr]'}><div className={`relative min-w-0 overflow-hidden bg-[#d8f1ee] ${mapOnly ? 'h-full min-h-[620px]' : 'min-h-[430px]'}`}><div ref={container} className={`absolute inset-0 ${!mapAvailable ? 'invisible' : ''}`}/>{!mapAvailable && status !== 'loading' && <GaodeRasterRouteMap route={route} selectedPointId={selectedPointId} onSelectPoint={onSelectPoint} />}{status === 'loading' && <div className="absolute inset-0 grid place-items-center bg-[#d8f1ee]"><div className="rounded-2xl bg-white/90 px-5 py-4 text-sm font-black text-river shadow-soft">正在请求高德道路规划…</div></div>}{failed && <div role="alert" className="absolute left-4 right-4 top-20 z-30 rounded-2xl border border-red-200 bg-white/95 p-4 shadow-xl backdrop-blur"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-500"/><div className="min-w-0 flex-1"><strong className="block text-sm text-red-700">道路规划失败，当前仅为点位连线</strong><p className="mt-1 text-xs font-bold leading-5 text-ink/55">{message}</p></div><button type="button" onClick={() => setRetryVersion((value) => value + 1)} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink px-3 py-2 text-xs font-black text-white"><RefreshCw className="h-3.5 w-3.5"/>重新规划</button></div></div>}</div>
       {!mapOnly&&<aside className="bg-[#fbfaf5] p-5">{selected&&<><div className="text-xs font-black tracking-[.16em] text-tower">STOP {route.points.findIndex(p=>p.id===selected.id)+1}</div><h4 className="mt-2 font-display text-3xl font-black">{selected.name}</h4><div className="mt-2 flex gap-2 text-xs font-bold text-ink/50"><span>{getPointTypeLabel(selected.type)}</span><span>·</span><span>{selected.time}</span><span>·</span><span>{selected.stayMinutes} 分钟</span></div><p className="mt-5 leading-7 text-ink/68">{selected.reason}</p><div className="mt-4 rounded-xl border-l-4 border-tower bg-white p-4 text-sm leading-6"><b>拍照：</b>{selected.photoTip}</div><div className="mt-3 rounded-xl bg-river/5 p-4 text-sm leading-6"><b>手账：</b>{selected.recordTip}</div></>}</aside>}
     </div>
   </section>;
+}
+
+function normalizeFailure(caught: unknown): DrivingSearchFailure {
+  if (caught && typeof caught === 'object' && 'status' in caught) return caught as DrivingSearchFailure;
+  return { status: 'error', error: caught };
+}
+
+function failureMessage(status: RoadPlanStatus) {
+  if (status === 'auth-error') return '高德 Key、安全密钥或域名白名单校验失败，请检查部署配置。';
+  if (status === 'network-error') return '高德脚本或路线服务网络请求失败，请检查网络后重试。';
+  if (status === 'no-data') return '高德没有返回可用道路方案，请调整点位后重试。';
+  return '道路服务暂时不可用，已使用灰色虚线显示估算点位顺序。';
 }
 
 function createRouteMarker(AMap: any, map: any, point: RoutePoint, index: number, onSelectPoint: (point: RoutePoint) => void) {
@@ -101,52 +160,6 @@ function createRouteMarker(AMap: any, map: any, point: RoutePoint, index: number
   return marker;
 }
 
-async function drawAmapDrivingRoute(AMap: any, map: any, points: RoutePoint[]) {
-  const emptyResult = { overlays: [] as any[], planned: false, realLegs: 0, failedLegs: Math.max(0, points.length - 1), distanceKm: undefined as number | undefined };
-  if (points.length < 2 || !AMap.plugin) return emptyResult;
-
-  await loadAmapPlugin(AMap, 'AMap.Driving');
-  const coordinates: [number, number][] = points.map((point) => [point.lng, point.lat]);
-
-  // Prefer one complete request so 高德 can optimize every stop as one route.
-  // JS API 2.0 requires coordinate arrays here; passing AMap.LngLat objects as
-  // waypoints can make the service reject the request and trigger a fake line.
-  const completeRoute = await searchDrivingPath(AMap, coordinates);
-  if (completeRoute.path.length > 1) {
-    const overlay = addRoadPolyline(AMap, map, completeRoute.path);
-    return {
-      overlays: [overlay],
-      planned: true,
-      realLegs: points.length - 1,
-      failedLegs: 0,
-      distanceKm: completeRoute.distanceMeters ? Number((completeRoute.distanceMeters / 1000).toFixed(1)) : undefined,
-    };
-  }
-
-  // A scenic-area entrance can occasionally make a multi-stop request fail.
-  // Replan each adjacent leg so one unavailable stop does not erase the other
-  // real road geometries. Failed legs are intentionally left blank: we never
-  // draw a straight connector and call it a navigation route.
-  const overlays: any[] = [];
-  let distanceMeters = 0;
-  let realLegs = 0;
-  for (let index = 1; index < coordinates.length; index += 1) {
-    const leg = await searchDrivingPath(AMap, [coordinates[index - 1], coordinates[index]]);
-    if (leg.path.length < 2) continue;
-    overlays.push(addRoadPolyline(AMap, map, leg.path));
-    distanceMeters += leg.distanceMeters;
-    realLegs += 1;
-  }
-
-  return {
-    overlays,
-    planned: realLegs === points.length - 1,
-    realLegs,
-    failedLegs: points.length - 1 - realLegs,
-    distanceKm: distanceMeters > 0 ? Number((distanceMeters / 1000).toFixed(1)) : undefined,
-  };
-}
-
 function loadAmapPlugin(AMap: any, plugin: string) {
   return new Promise<void>((resolve, reject) => {
     try {
@@ -155,50 +168,6 @@ function loadAmapPlugin(AMap: any, plugin: string) {
       reject(error);
     }
   });
-}
-
-function searchDrivingPath(AMap: any, coordinates: [number, number][]) {
-  return new Promise<{ path: any[]; distanceMeters: number }>((resolve) => {
-    if (coordinates.length < 2) {
-      resolve({ path: [], distanceMeters: 0 });
-      return;
-    }
-    try {
-      const driving = new AMap.Driving({
-        policy: AMap.DrivingPolicy?.LEAST_TIME ?? 0,
-        extensions: 'all',
-        ferry: 0,
-      });
-      const start = coordinates[0];
-      const end = coordinates[coordinates.length - 1];
-      const waypoints = coordinates.slice(1, -1);
-      const callback = (status: string, result: any) => {
-        const route = status === 'complete' ? result?.routes?.[0] : undefined;
-        resolve({
-          path: extractDrivingPath(route),
-          distanceMeters: Number(route?.distance) || 0,
-        });
-      };
-      if (waypoints.length > 0) driving.search(start, end, { waypoints }, callback);
-      else driving.search(start, end, callback);
-    } catch {
-      resolve({ path: [], distanceMeters: 0 });
-    }
-  });
-}
-
-function extractDrivingPath(route: any) {
-  const path: any[] = [];
-  for (const step of route?.steps ?? []) {
-    for (const point of step?.path ?? []) {
-      const previous = path[path.length - 1];
-      const lng = typeof point?.getLng === 'function' ? point.getLng() : Number(point?.lng ?? point?.[0]);
-      const lat = typeof point?.getLat === 'function' ? point.getLat() : Number(point?.lat ?? point?.[1]);
-      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
-      if (!previous || previous[0] !== lng || previous[1] !== lat) path.push([lng, lat]);
-    }
-  }
-  return path;
 }
 
 function addRoadPolyline(AMap: any, map: any, path: any[]) {
@@ -221,8 +190,25 @@ function addRoadPolyline(AMap: any, map: any, path: any[]) {
     lineCap: 'round',
     zIndex: 46,
   });
-  map.add([outline, routeLine]);
-  return routeLine;
+  const overlays = [outline, routeLine];
+  map.add(overlays);
+  return overlays;
+}
+
+function addFallbackPolyline(AMap: any, map: any, points: RoutePoint[]) {
+  const fallbackLine = new AMap.Polyline({
+    path: points.map((point) => [point.lng, point.lat]),
+    strokeColor: '#dc4b3e',
+    strokeWeight: 5,
+    strokeOpacity: 0.78,
+    strokeStyle: 'dashed',
+    strokeDasharray: [10, 10],
+    lineJoin: 'round',
+    lineCap: 'round',
+    zIndex: 42,
+  });
+  map.add(fallbackLine);
+  return [fallbackLine];
 }
 
 function pointColor(type: RoutePoint['type']) {
@@ -282,6 +268,10 @@ function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route:
             style={{ left: tile.originX, top: tile.originY, width: 256, height: 256 }}
           />
         ))}
+        <svg viewBox="0 0 1000 700" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          <polyline points={projected.map(({ x, y }) => `${x},${y}`).join(' ')} fill="none" stroke="#ffffff" strokeWidth="10" strokeOpacity=".86" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points={projected.map(({ x, y }) => `${x},${y}`).join(' ')} fill="none" stroke="#dc4b3e" strokeWidth="5" strokeOpacity=".82" strokeDasharray="12 12" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         {projected.map(({ point, x, y }, index) => {
           const active = point.id === selectedPointId;
           return (
@@ -307,7 +297,7 @@ function GaodeRasterRouteMap({ route, selectedPointId, onSelectPoint }: { route:
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/55 to-transparent" />
       <div className="absolute bottom-3 left-3 rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-ink/60 shadow-sm">高德地图底图 · AutoNavi</div>
-      <div className="absolute bottom-3 right-3 rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-tower shadow-sm">路线服务未连接 · 不显示虚假直线</div>
+      <div className="absolute bottom-3 right-3 rounded-full bg-white/92 px-3 py-1.5 text-xs font-black text-red-600 shadow-sm">道路规划失败 · 红色虚线仅为点位连线</div>
     </div>
   );
 }
