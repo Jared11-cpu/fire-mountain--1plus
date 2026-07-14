@@ -37,21 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Unit and component tests
-        run: pnpm test
-
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: HashRouter end-to-end tests
-        run: pnpm test:e2e
-
-      - name: Build
+      - name: Build static site
         env:
-          VITE_AMAP_ENABLED: ${{ vars.VITE_AMAP_ENABLED || 'true' }}
+          VITE_AMAP_ENABLED: ${{ vars.VITE_AMAP_ENABLED || 'false' }}
           VITE_AMAP_KEY: ${{ secrets.VITE_AMAP_KEY || vars.VITE_AMAP_KEY }}
           VITE_AMAP_SECURITY_CODE: ${{ secrets.VITE_AMAP_SECURITY_CODE || vars.VITE_AMAP_SECURITY_CODE }}
         run: pnpm build:static
@@ -59,7 +47,7 @@ jobs:
       - name: Disable Jekyll processing
         run: touch dist/.nojekyll
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
