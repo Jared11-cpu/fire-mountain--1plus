@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -30,6 +30,9 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,6 +55,9 @@ jobs:
           VITE_AMAP_KEY: ${{ secrets.VITE_AMAP_KEY || vars.VITE_AMAP_KEY }}
           VITE_AMAP_SECURITY_CODE: ${{ secrets.VITE_AMAP_SECURITY_CODE || vars.VITE_AMAP_SECURITY_CODE }}
         run: pnpm build:static
+
+      - name: Disable Jekyll processing
+        run: touch dist/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
